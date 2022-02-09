@@ -1,0 +1,1 @@
+require("__Kontraptions__/data/motion-sensor/motion-sensor")
