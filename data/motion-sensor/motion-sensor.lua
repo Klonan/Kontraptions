@@ -70,9 +70,11 @@ end
 
 local enemy_motion_sensor =
 {
-  type = "electric-turret",
+  type = "turret",
   name = "enemy-motion-sensor",
   localised_name = {"enemy-motion-sensor"},
+  localised_description = {"enemy-motion-sensor-description"},
+  attack_target_mask = {"motion"},
   icon = "__Kontraptions__/data/motion-sensor/enemy-motion-sensor-icon.png",
   icon_size = 64,
   selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
@@ -156,7 +158,9 @@ local enemy_item =
   icon = "__Kontraptions__/data/motion-sensor/enemy-motion-sensor-icon.png",
   icon_size = 64,
   stack_size = 10,
-  place_result = "enemy-motion-sensor"
+  place_result = "enemy-motion-sensor",
+  subgroup = "circuit-network",
+  order = "k[kontraptions]-b[enemy-motion-sensor]"
 }
 
 local enemy_invisible_combinator =
@@ -230,9 +234,11 @@ local enemy_invisible_combinator =
 
 local friendly_motion_sensor =
 {
-  type = "electric-turret",
+  type = "turret",
   name = "friendly-motion-sensor",
   localised_name = {"friendly-motion-sensor"},
+  localised_description = {"friendly-motion-sensor-description"},
+  attack_target_mask = {"motion"},
   is_military_target = false,
   icon = "__Kontraptions__/data/motion-sensor/friendly-motion-sensor-icon.png",
   icon_size = 64,
@@ -316,7 +322,9 @@ local friendly_item =
   icon = "__Kontraptions__/data/motion-sensor/friendly-motion-sensor-icon.png",
   icon_size = 64,
   stack_size = 10,
-  place_result = "friendly-motion-sensor"
+  place_result = "friendly-motion-sensor",
+  subgroup = "circuit-network",
+  order = "k[kontraptions]-a[motion-sensor]"
 }
 
 local friendly_invisible_combinator =
@@ -388,6 +396,73 @@ local friendly_invisible_combinator =
   }
 }
 
+local enemy_recipe =
+{
+  type = "recipe",
+  name = "enemy-motion-sensor",
+  localised_name = {"enemy-motion-sensor"},
+  enabled = false,
+  ingredients =
+  {
+    {"electronic-circuit", 10},
+    {"battery", 4},
+    {"steel-plate", 2}
+  },
+  result = "enemy-motion-sensor"
+}
+
+local friendly_recipe =
+{
+  type = "recipe",
+  name = "friendly-motion-sensor",
+  localised_name = {"friendly-motion-sensor"},
+  enabled = false,
+  ingredients =
+  {
+    {"electronic-circuit", 10},
+    {"battery", 4},
+    {"steel-plate", 2}
+  },
+  result = "friendly-motion-sensor"
+}
+
+local motion_sensor_technology =
+{
+  type = "technology",
+  name = "motion-sensor",
+  localised_name = {"motion-sensor"},
+  icon = "__Kontraptions__/data/motion-sensor/motion-sensor-tech-icon.png",
+  icon_size = 128,
+  effects =
+  {
+    {
+      type = "unlock-recipe",
+      recipe = "enemy-motion-sensor"
+    },
+    {
+      type = "unlock-recipe",
+      recipe = "friendly-motion-sensor"
+    }
+  },
+  prerequisites = {"circuit-network", "battery"},
+  unit =
+  {
+    count = 150,
+    ingredients =
+    {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1}
+    },
+    time = 30
+  },
+  order = "a-d-a"
+}
+
+local target_mask =
+{
+  name = "motion",
+  type = "trigger-target-type"
+}
 
 data:extend
 {
@@ -397,4 +472,8 @@ data:extend
   friendly_motion_sensor,
   friendly_item,
   friendly_invisible_combinator,
+  enemy_recipe,
+  friendly_recipe,
+  motion_sensor_technology,
+  target_mask
 }
