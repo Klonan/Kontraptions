@@ -46,7 +46,7 @@ tick
 ]]
 
 local init_pair = function(turret, combinator)
-  combinator.destructible = false
+  turret.destructible = false
 
   local control_behavior = combinator.get_or_create_control_behavior()
   control_behavior.enabled = false
@@ -66,17 +66,31 @@ local init_pair = function(turret, combinator)
   script.register_on_entity_destroyed(combinator)
 end
 
-local on_motion_sensor_created = function(event)
+local on_enemy_motion_sensor_created = function(event)
   game.print("Motion sensor created")
   local turret = event.source_entity
   local combinator = turret.surface.create_entity
   {
-    name = "invisible-combinator",
+    name = "enemy-invisible-combinator",
     position = turret.position,
     force = turret.force,
     direction = turret.direction
   }
   init_pair(turret, combinator)
+end
+
+local on_friendly_motion_sensor_created = function(event)
+  game.print("Friendly otion sensor created")
+  local turret = event.source_entity
+  local combinator = turret.surface.create_entity
+  {
+    name = "friendly-invisible-combinator",
+    position = turret.position,
+    force = turret.force,
+    direction = turret.direction
+  }
+  init_pair(turret, combinator)
+  turret.force = "enemy"
 end
 
 local add_to_tick_updates = function(unit_number, tick)
@@ -101,16 +115,31 @@ local on_motion_sensor_triggered = function(event)
   add_to_tick_updates(unit_number, event.tick)
 end
 
-local on_motion_sensor_combinator_created = function(event)
-  game.print("Motion sensor combinator created")
+local on_enemy_motion_sensor_combinator_created = function(event)
+  game.print("Enemy motion sensor combinator created")
 
   local combinator = event.source_entity
 
   local turret = combinator.surface.create_entity
   {
-    name = "motion-sensor",
+    name = "enemy-motion-sensor",
     position = combinator.position,
     force = combinator.force,
+    direction = combinator.direction
+  }
+  init_pair(turret, combinator)
+end
+
+local on_friendly_motion_sensor_combinator_created = function(event)
+  game.print("Friendly motion sensor combinator created")
+
+  local combinator = event.source_entity
+
+  local turret = combinator.surface.create_entity
+  {
+    name = "friendly-motion-sensor",
+    position = combinator.position,
+    force = "enemy",
     direction = combinator.direction
   }
   init_pair(turret, combinator)
@@ -119,8 +148,10 @@ end
 local triggers =
 {
   ["motion-sensor-triggered"] = on_motion_sensor_triggered,
-  ["motion-sensor-created"] = on_motion_sensor_created,
-  ["motion-sensor-combinator-created"] = on_motion_sensor_combinator_created
+  ["enemy-motion-sensor-created"] = on_enemy_motion_sensor_created,
+  ["enemy-motion-sensor-combinator-created"] = on_enemy_motion_sensor_combinator_created,
+  ["friendly-motion-sensor-created"] = on_friendly_motion_sensor_created,
+  ["friendly-motion-sensor-combinator-created"] = on_friendly_motion_sensor_combinator_created
 }
 
 local on_script_trigger_effect = function(event)
@@ -144,13 +175,8 @@ local on_player_rotated_entity = function(event)
   local motion_sensor_data = script_data.sensors[entity.unit_number]
   if not motion_sensor_data then return end
 
-  if entity.name == "motion-sensor" then
-    game.print("Rotated combunator")
-    motion_sensor_data.combinator.direction = entity.direction
-  elseif entity.name == "invisible-combinator" then
-    game.print("Rotated turret")
-    motion_sensor_data.turret.direction = entity.direction
-  end
+  local other = (entity ~= motion_sensor_data.turret and motion_sensor_data.turret) or motion_sensor_data.combinator
+  other.direction = entity.direction
 
 end
 
@@ -187,7 +213,9 @@ local clear_motion_sensor_data = function(unit_number)
   end
 
   script_data.sensors[unit_number] = nil
-  script_data.sensors[other_unit_number] = nil
+  if other_unit_number then
+    script_data.sensors[other_unit_number] = nil
+  end
 
 end
 
