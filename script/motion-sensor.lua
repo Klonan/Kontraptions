@@ -67,7 +67,7 @@ local init_pair = function(turret, combinator)
 end
 
 local on_enemy_motion_sensor_created = function(event)
-  game.print("Motion sensor created")
+  --game.print("Motion sensor created")
   local turret = event.source_entity
   local combinator = turret.surface.create_entity
   {
@@ -80,7 +80,7 @@ local on_enemy_motion_sensor_created = function(event)
 end
 
 local on_friendly_motion_sensor_created = function(event)
-  game.print("Friendly otion sensor created")
+  --game.print("Friendly otion sensor created")
   local turret = event.source_entity
   local combinator = turret.surface.create_entity
   {
@@ -104,7 +104,7 @@ local add_to_tick_updates = function(unit_number, tick)
 end
 
 local on_motion_sensor_triggered = function(event)
-  game.print("Motion sensor triggered")
+  --game.print("Motion sensor triggered")
   local turret = event.source_entity
   if not turret then return end
   local unit_number = turret.unit_number
@@ -116,7 +116,7 @@ local on_motion_sensor_triggered = function(event)
 end
 
 local on_enemy_motion_sensor_combinator_created = function(event)
-  game.print("Enemy motion sensor combinator created")
+  --game.print("Enemy motion sensor combinator created")
 
   local combinator = event.source_entity
 
@@ -131,7 +131,7 @@ local on_enemy_motion_sensor_combinator_created = function(event)
 end
 
 local on_friendly_motion_sensor_combinator_created = function(event)
-  game.print("Friendly motion sensor combinator created")
+  --game.print("Friendly motion sensor combinator created")
 
   local combinator = event.source_entity
 
@@ -192,7 +192,7 @@ local update = function(unit_number, tick)
 end
 
 local clear_motion_sensor_data = function(unit_number)
-  game.print("Motion sensor destroyed")
+  --game.print("Motion sensor destroyed")
   if not unit_number then return end
   local motion_sensor_data = script_data.sensors[unit_number]
   if not motion_sensor_data then return end
