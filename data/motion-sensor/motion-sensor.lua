@@ -1,4 +1,6 @@
 local DETECTION_RANGE = 32
+local MIN_RANGE = 2
+local TURN_RANGE = 0.33
 
 local util = require("util")
 
@@ -90,7 +92,8 @@ local enemy_motion_sensor =
     type = "projectile",
     cooldown = 60,
     range = DETECTION_RANGE,
-    turn_range = 0.5,
+    min_range = MIN_RANGE,
+    turn_range = TURN_RANGE,
     ammo_type =
     {
       category = "melee",
@@ -250,8 +253,8 @@ local friendly_motion_sensor =
     type = "projectile",
     cooldown = 60,
     range = DETECTION_RANGE,
-    min_range = 1.5,
-    turn_range = 0.4,
+    min_range = MIN_RANGE,
+    turn_range = TURN_RANGE,
     ammo_type =
     {
       category = "melee",
