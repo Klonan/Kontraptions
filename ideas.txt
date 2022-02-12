@@ -7,3 +7,4 @@ Pressure plate
 daylight sensor
 push button
 lever
+wire reel (auto connect circuit wires)

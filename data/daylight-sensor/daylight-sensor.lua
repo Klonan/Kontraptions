@@ -1,18 +1,35 @@
 local sprite =
 {
-  filename = "__base__/graphics/entity/accumulator/hr-accumulator.png",
-  priority = "extra-high",
-  width = 124,
-  height = 103,
-  shift = {0, 0},
-  scale = 0.25
+  layers =
+  {
+    {
+      filename = "__Kontraptions__/data/daylight-sensor/daylight-sensor.png",
+      width = 64,
+      height = 64,
+      shift = {0, 0},
+      scale = 0.5
+    },
+    {
+      filename = "__base__/graphics/entity/small-lamp/hr-lamp-shadow.png",
+      width = 76,
+      height = 47,
+      frame_count = 1,
+      axially_symmetrical = false,
+      direction_count = 1,
+      shift = util.by_pixel(4, 4.75),
+      draw_as_shadow = true,
+      scale = 0.5
+    }
+  }
 }
 
 local daylight_sensor =
 {
   type = "accumulator",
   name = "daylight-sensor",
-  icon = "__base__/graphics/icons/accumulator.png",
+  localised_name = {"daylight-sensor"},
+  localised_description = {"daylight-sensor-description"},
+  icon = "__Kontraptions__/data/daylight-sensor/daylight-sensor.png",
   icon_size = 64,
   flags = {"placeable-neutral", "player-creation"},
   minable = {hardness = 0.2, mining_time = 0.5, result = "daylight-sensor"},
@@ -51,22 +68,69 @@ local daylight_sensor =
       }
     }
   },
+  circuit_wire_connection_point = circuit_connector_definitions["lamp"].points,
+  circuit_connector_sprites = circuit_connector_definitions["lamp"].sprites,
 }
 
 local daylight_sensor_item =
 {
   type = "item",
   name = "daylight-sensor",
-  icon = "__base__/graphics/icons/accumulator.png",
+  icon = "__Kontraptions__/data/daylight-sensor/daylight-sensor.png",
   icon_size = 64,
-  subgroup = "energy",
+  subgroup = "circuit-network",
   order = "a[energy]-a[accumulator]",
   place_result = "daylight-sensor",
-  stack_size = 50
+  stack_size = 10
+}
+
+local daylight_sensor_recipe =
+{
+  type = "recipe",
+  name = "daylight-sensor",
+  enabled = false,
+  ingredients =
+  {
+    {"electronic-circuit", 10},
+    {"iron-plate", 5},
+    {"solar-panel", 1}
+  },
+  result = "daylight-sensor"
+}
+
+local daylight_sensor_technology =
+{
+  type = "technology",
+  name = "daylight-sensor",
+  localised_name = {"daylight-sensor"},
+  localised_description = {"daylight-sensor-description"},
+  icon = "__Kontraptions__/data/daylight-sensor/daylight-sensor-tech-icon.png",
+  icon_size = 128,
+  effects =
+  {
+    {
+      type = "unlock-recipe",
+      recipe = "daylight-sensor"
+    }
+  },
+  prerequisites = {"circuit-network", "solar-energy"},
+  unit =
+  {
+    count = 200,
+    ingredients =
+    {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1}
+    },
+    time = 30
+  },
+  order = "a-f-a"
 }
 
 data:extend
 {
   daylight_sensor,
-  daylight_sensor_item
+  daylight_sensor_item,
+  daylight_sensor_recipe,
+  daylight_sensor_technology
 }
