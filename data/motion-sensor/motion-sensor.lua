@@ -47,7 +47,7 @@ local sprite = function(direction, friendly)
         shift = {1, -1},
         y = y_offset[direction] * 220,
         draw_as_shadow = true
-      },
+      }
     }
   }
 end
@@ -85,13 +85,6 @@ local enemy_motion_sensor =
   corpse = "small-remnants",
   collision_box = {{-0.2, -0.2}, {0.2, 0.2}},
   selection_priority = 10,
-  resistances =
-  {
-    {
-      type = "fire",
-      percent = 100
-    }
-  },
   attack_parameters =
   {
     type = "projectile",
@@ -173,7 +166,7 @@ local enemy_invisible_combinator =
   flags = {"not-on-map", "player-creation"},
   is_military_target = false,
   minable = {mining_time = 0.5, result = "enemy-motion-sensor"},
-  max_health = 50000,
+  max_health = 100,
   collision_box = {{-0.05, -0.05}, {0.05, 0.05}},
   selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
   selection_priority = 100,
@@ -183,11 +176,7 @@ local enemy_invisible_combinator =
     north = sprite("north", false),
     east = sprite("east", false),
     south = sprite("south", false),
-    west = sprite("west", false),
-    north_disabled = sprite("north", false),
-    east_disabled = sprite("east", false),
-    south_disabled = sprite("south", false),
-    west_disabled = sprite("west", false),
+    west = sprite("west", false)
   },
   activity_led_sprites =
   {
@@ -261,7 +250,8 @@ local friendly_motion_sensor =
     type = "projectile",
     cooldown = 60,
     range = DETECTION_RANGE,
-    turn_range = 0.5,
+    min_range = 1.5,
+    turn_range = 0.4,
     ammo_type =
     {
       category = "melee",
@@ -337,7 +327,7 @@ local friendly_invisible_combinator =
   flags = {"not-on-map", "player-creation"},
   is_military_target = false,
   minable = {mining_time = 0.5, result = "friendly-motion-sensor"},
-  max_health = 50000,
+  max_health = 100,
   collision_box = {{-0.05, -0.05}, {0.05, 0.05}},
   selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
   selection_priority = 100,
@@ -347,11 +337,7 @@ local friendly_invisible_combinator =
     north = sprite("north", true),
     east = sprite("east", true),
     south = sprite("south", true),
-    west = sprite("west", true),
-    north_disabled = sprite("north", true),
-    east_disabled = sprite("east", true),
-    south_disabled = sprite("south", true),
-    west_disabled = sprite("west", true),
+    west = sprite("west", true)
   },
   activity_led_sprites =
   {
