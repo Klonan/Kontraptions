@@ -7,3 +7,6 @@ Pressure plate
 ~daylight sensor
 push button
 lever
+mini-train
+dispenser (heals)
+mini-turret capsule
