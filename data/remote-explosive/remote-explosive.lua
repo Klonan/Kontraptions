@@ -323,10 +323,55 @@ local invisible_pump =
   },
 }
 
+local remote_explosive_recipe =
+{
+  type = "recipe",
+  name = "remote-explosive",
+  enabled = false,
+  ingredients =
+  {
+    {"steel-chest", 1},
+    {"explosives", 10}
+  },
+  result = "remote-explosive"
+}
+
+local remote_explosive_technology =
+{
+  type = "technology",
+  name = "remote-explosive",
+  localised_name = {"remote-explosive"},
+  localised_description = {"remote-explosive-description"},
+  icon = "__Kontraptions__/data/remote-explosive/remote-explosive-tech-icon.png",
+  icon_size = 128,
+  effects =
+  {
+    {
+      type = "unlock-recipe",
+      recipe = "remote-explosive"
+    },
+  },
+  prerequisites = {"explosives"},
+  unit =
+  {
+    count = 200,
+    ingredients =
+    {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1}
+    },
+    time = 30
+  },
+  order = "a-d-a"
+}
+
 data:extend
 {
   pump,
   pump_item,
   fluid_turret,
-  invisible_pump
+  invisible_pump,
+  remote_explosive_recipe,
+  remote_explosive_technology,
+
 }
