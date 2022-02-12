@@ -420,6 +420,7 @@ local motion_sensor_technology =
   type = "technology",
   name = "motion-sensor",
   localised_name = {"motion-sensor"},
+  localised_description = {"motion-sensor-description"},
   icon = "__Kontraptions__/data/motion-sensor/motion-sensor-tech-icon.png",
   icon_size = 128,
   effects =
