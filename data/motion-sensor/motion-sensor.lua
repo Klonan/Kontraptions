@@ -173,7 +173,7 @@ local enemy_invisible_combinator =
   collision_box = {{-0.05, -0.05}, {0.05, 0.05}},
   selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
   selection_priority = 100,
-  item_slot_count = 1,
+  item_slot_count = 20,
   sprites =
   {
     north = sprite("north", false),
@@ -334,7 +334,7 @@ local friendly_invisible_combinator =
   collision_box = {{-0.05, -0.05}, {0.05, 0.05}},
   selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
   selection_priority = 100,
-  item_slot_count = 1,
+  item_slot_count = 20,
   sprites =
   {
     north = sprite("north", true),
