@@ -1,10 +1,9 @@
-Motion sensor
+~Motion sensor
 Tree harvesting roomba
 Lawnmower roomba
 Long range drone delivery
-remote explosive (TNT)
+~remote explosive (TNT)
 Pressure plate
-daylight sensor
+~daylight sensor
 push button
 lever
-wire reel (auto connect circuit wires)
