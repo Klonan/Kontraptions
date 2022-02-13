@@ -1,5 +1,5 @@
-local MAX_TEXT_LENGTH = 500
-local TOOLTIP_DELAY = 30
+local MAX_TEXT_LENGTH = 512
+local TOOLTIP_DELAY = 20
 
 local script_data =
 {
