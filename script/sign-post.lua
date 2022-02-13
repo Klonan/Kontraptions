@@ -1,4 +1,4 @@
-local MAX_TEXT_LENGTH = 512
+local MAX_TEXT_LENGTH = 1000
 local TOOLTIP_DELAY = 20
 
 local script_data =
@@ -17,8 +17,16 @@ local init_sign_post_data = function(entity)
       admins_only = false
     }
     script_data.sign_posts[entity.unit_number] = sign_post_data
+    script.register_on_entity_destroyed(entity)
   end
   return sign_post_data
+end
+
+local determine_height = function(player)
+  local scale = player.display_scale
+  local screen_height = player.display_resolution.height
+  local remaining_height = screen_height - ((252 + 150 + 24 + 40 + 24 + 24) * scale)
+  return math.min(remaining_height, 400 * scale)
 end
 
 local sign_post_opened = function(entity, player)
@@ -36,6 +44,7 @@ local sign_post_opened = function(entity, player)
         gui = defines.relative_gui_type.pipe_gui,
         name = entity.name,
         position = defines.relative_gui_position.bottom
+        --position = defines.relative_gui_position.right
       }
     }
   end
@@ -46,6 +55,7 @@ local sign_post_opened = function(entity, player)
     direction = "vertical",
     style = "entity_frame"
   }
+  inner.style.height = determine_height(player)
   local textbox = inner.add
   {
     type = "text-box",
@@ -55,9 +65,9 @@ local sign_post_opened = function(entity, player)
   }
   textbox.read_only = sign_post_data.admins_only and not player.admin
   textbox.style.horizontally_stretchable = true
+  textbox.style.vertically_stretchable = true
   textbox.style.minimal_width = 0
   textbox.style.width = 0
-  textbox.style.minimal_height = math.min(148 * player.display_scale, 600)
   textbox.word_wrap = true
 
   if player.admin then
@@ -90,7 +100,7 @@ local update_admins_only = function(player, unit_number, new_state)
   sign_post_data.admins_only = new_state
 end
 
-local update_text = function(player, unit_number, new_text)
+local update_text = function(player, unit_number, gui)
 
   local sign_post_data = script_data.sign_posts[unit_number]
   if not sign_post_data then return end
@@ -100,7 +110,19 @@ local update_text = function(player, unit_number, new_text)
     return
   end
 
-  sign_post_data.text = new_text
+  local text = gui.text
+
+  if text:len() > MAX_TEXT_LENGTH then
+    text = text:sub(1, MAX_TEXT_LENGTH)
+    gui.text = text
+    player.create_local_flying_text
+    {
+      text = {"text-too-long"},
+      create_at_cursor = true,
+    }
+  end
+
+  sign_post_data.text = text
 end
 
 local on_gui_check_state_changed = function(event)
@@ -137,8 +159,7 @@ local on_gui_text_changed = function(event)
   if not unit_number then return end
 
   if action == "edit_text" then
-    gui.text = string.sub(gui.text, 1, MAX_TEXT_LENGTH)
-    update_text(player, unit_number, gui.text)
+    update_text(player, unit_number, gui)
   end
 
 end
@@ -152,6 +173,7 @@ local clear_tooltip = function(player)
   end
 end
 
+local sad = "(◕︵◕)"
 local show_tooltip = function(player)
   local tooltip_data = script_data.player_tooltips[player.index]
   if not tooltip_data then return end
@@ -177,7 +199,7 @@ local show_tooltip = function(player)
     force = entity.force,
     direction = entity.direction,
     target = entity,
-    text = sign_post_data.text,
+    text = (player.mining_state.mining and sad) or sign_post_data.text,
   }
 
 end
@@ -271,12 +293,17 @@ local on_robot_built_entity = function(event)
   local sign_post_tags = tags.sign_post_data
   if not sign_post_tags then return end
 
-
   local sign_post_data = init_sign_post_data(entity)
   sign_post_data.text = sign_post_tags.text
   sign_post_data.admins_only = sign_post_tags.admins_only
 
   --game.print("Loaded tags from blueprint")
+end
+
+local on_entity_destroyed = function(event)
+  if event.unit_number then
+    script_data.sign_posts[event.unit_number] = nil
+  end
 end
 
 local lib = {}
@@ -291,6 +318,7 @@ lib.events =
   [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
   [defines.events.on_player_setup_blueprint] = on_player_setup_blueprint,
   [defines.events.on_robot_built_entity] = on_robot_built_entity,
+  [defines.events.on_entity_destroyed] = on_entity_destroyed
 }
 
 lib.on_init = function()
