@@ -14,7 +14,10 @@ local init_sign_post_data = function(entity)
     {
       entity = entity,
       text = "",
-      admins_only = false
+      admins_only = false,
+      always_show_message = false,
+      tooltip = false,
+      players_targeting = {}
     }
     script_data.sign_posts[entity.unit_number] = sign_post_data
     script.register_on_entity_destroyed(entity)
@@ -63,24 +66,35 @@ local sign_post_opened = function(entity, player)
     tags = {sign_post_action = "edit_text", sign_post_unit_number = entity.unit_number},
     style = "textbox",
   }
-  textbox.read_only = sign_post_data.admins_only and not player.admin
+
+  local read_only = sign_post_data.admins_only and not player.admin
+
+  textbox.read_only = read_only
   textbox.style.horizontally_stretchable = true
   textbox.style.vertically_stretchable = true
   textbox.style.minimal_width = 0
   textbox.style.width = 0
   textbox.word_wrap = true
 
-  if player.admin then
-    inner.add
-    {
-      type = "checkbox",
-      caption = {"edit-admins-only"},
-      tooltip = {"edit-admins-only-tooltip"},
-      state = sign_post_data.admins_only,
-      enabled = player.admin,
-      tags = {sign_post_action = "admins_only", sign_post_unit_number = entity.unit_number}
-    }
-  end
+  inner.add
+  {
+    type = "checkbox",
+    caption = {"always-show-message"},
+    tooltip = {"always-show-message-tooltip"},
+    state = sign_post_data.always_show_message,
+    enabled = not read_only,
+    tags = {sign_post_action = "always_show_message", sign_post_unit_number = entity.unit_number}
+  }
+
+  inner.add
+  {
+    type = "checkbox",
+    caption = {"edit-admins-only"},
+    tooltip = {"edit-admins-only-tooltip"},
+    state = sign_post_data.admins_only,
+    enabled = player.admin,
+    tags = {sign_post_action = "admins_only", sign_post_unit_number = entity.unit_number}
+  }
 
 end
 
@@ -98,6 +112,54 @@ local update_admins_only = function(player, unit_number, new_state)
   local sign_post_data = script_data.sign_posts[unit_number]
   if not sign_post_data then return end
   sign_post_data.admins_only = new_state
+end
+
+local create_tooltip = function(sign_post_data)
+  local entity = sign_post_data.entity
+  if not (entity and entity.valid) then return end
+
+  local tooltip = sign_post_data.tooltip
+  if tooltip and tooltip.valid then return end
+
+  if sign_post_data.text == "" then return end
+
+  sign_post_data.tooltip = entity.surface.create_entity
+  {
+    name = "compi-speech-bubble",
+    position = entity.position,
+    force = entity.force,
+    direction = entity.direction,
+    target = entity,
+    text = sign_post_data.text,
+  }
+
+end
+
+local clear_tooltip = function(sign_post_data)
+  local tooltip = sign_post_data.tooltip
+  if tooltip and tooltip.valid then
+    tooltip.start_fading_out()
+  end
+  sign_post_data.tooltip = false
+end
+
+local update_tooltip = function(sign_post_data)
+  if not sign_post_data.entity.valid then return end
+
+  local should_show_tooltip = sign_post_data.always_show_message or next(sign_post_data.players_targeting)
+
+  if should_show_tooltip then
+    create_tooltip(sign_post_data)
+  else
+    clear_tooltip(sign_post_data)
+  end
+end
+
+local update_always_show_message = function(player, unit_number, new_state)
+  local sign_post_data = script_data.sign_posts[unit_number]
+  if not sign_post_data then return end
+  sign_post_data.always_show_message = new_state
+  update_tooltip(sign_post_data)
 end
 
 local update_text = function(player, unit_number, gui)
@@ -123,6 +185,8 @@ local update_text = function(player, unit_number, gui)
   end
 
   sign_post_data.text = text
+  clear_tooltip(sign_post_data)
+  update_tooltip(sign_post_data)
 end
 
 local on_gui_check_state_changed = function(event)
@@ -141,6 +205,12 @@ local on_gui_check_state_changed = function(event)
 
   if action == "admins_only" then
     update_admins_only(player, unit_number, gui.state)
+    return
+  end
+
+  if action == "always_show_message" then
+    update_always_show_message(player, unit_number, gui.state)
+    return
   end
 end
 
@@ -164,17 +234,23 @@ local on_gui_text_changed = function(event)
 
 end
 
-local clear_tooltip = function(player)
+local clear_player_tooltip = function(player)
   local tooltip_data = script_data.player_tooltips[player.index]
   if not tooltip_data then return end
+
   script_data.player_tooltips[player.index] = nil
-  if tooltip_data.entity and tooltip_data.entity.valid then
-    tooltip_data.entity.start_fading_out()
-  end
+
+  local sign_post_data = script_data.sign_posts[tooltip_data.selected_unit_number]
+  if not sign_post_data then return end
+
+  local players_targeting = sign_post_data.players_targeting
+  players_targeting[player.index] = nil
+
+  update_tooltip(sign_post_data)
+
 end
 
-local sad = "(◕︵◕)"
-local show_tooltip = function(player)
+local show_player_tooltip = function(player)
   local tooltip_data = script_data.player_tooltips[player.index]
   if not tooltip_data then return end
 
@@ -190,17 +266,9 @@ local show_tooltip = function(player)
   local sign_post_data = script_data.sign_posts[entity.unit_number]
   if not sign_post_data then return end
 
-  if sign_post_data.text == "" then return end
+  sign_post_data.players_targeting[player.index] = true
 
-  tooltip_data.entity = entity.surface.create_entity
-  {
-    name = "compi-speech-bubble",
-    position = entity.position,
-    force = entity.force,
-    direction = entity.direction,
-    target = entity,
-    text = (player.mining_state.mining and sad) or sign_post_data.text,
-  }
+  update_tooltip(sign_post_data)
 
 end
 
@@ -208,7 +276,7 @@ local on_selected_entity_changed = function(event)
   local player = game.get_player(event.player_index)
   if not (player and player.valid) then return end
 
-  clear_tooltip(player)
+  clear_player_tooltip(player)
 
   local entity = player.selected
   if not (entity and entity.valid) then return end
@@ -216,7 +284,8 @@ local on_selected_entity_changed = function(event)
 
   script_data.player_tooltips[player.index] =
   {
-    tick_of_selection = event.tick
+    tick_of_selection = event.tick,
+    selected_unit_number = entity.unit_number
   }
 
 end
@@ -224,7 +293,7 @@ end
 local on_tick = function(event)
   for player_index, tooltip_data in pairs(script_data.player_tooltips) do
     if event.tick == tooltip_data.tick_of_selection + TOOLTIP_DELAY then
-      show_tooltip(game.get_player(player_index))
+      show_player_tooltip(game.get_player(player_index))
     end
   end
 end
@@ -242,6 +311,8 @@ local on_entity_settings_pasted = function(event)
   local destination_data = init_sign_post_data(destination)
   destination_data.text = sign_post_data.text
   destination_data.admins_only = sign_post_data.admins_only
+  destination_data.always_show_message = sign_post_data.always_show_message
+  update_tooltip(destination_data)
 
 end
 
@@ -253,7 +324,8 @@ local save_to_blueprint_tags = function(sign_post)
   return
   {
     text = sign_post_data.text,
-    admins_only = sign_post_data.admins_only
+    admins_only = sign_post_data.admins_only,
+    always_show_message = sign_post_data.always_show_message,
   }
 end
 
@@ -296,6 +368,8 @@ local on_robot_built_entity = function(event)
   local sign_post_data = init_sign_post_data(entity)
   sign_post_data.text = sign_post_tags.text
   sign_post_data.admins_only = sign_post_tags.admins_only
+  sign_post_data.always_show_message = sign_post_tags.always_show_message
+  update_tooltip(sign_post_data)
 
   --game.print("Loaded tags from blueprint")
 end
@@ -322,7 +396,7 @@ lib.events =
 }
 
 lib.on_init = function()
-  global.sign_posts = global.sign_posts or {}
+  global.sign_posts = global.sign_posts or script_data
 end
 
 lib.on_load = function()
