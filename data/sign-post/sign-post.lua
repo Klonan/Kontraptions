@@ -62,7 +62,7 @@ local sign_post =
   icon = "__Kontraptions__/data/sign-post/sign-post-icon.png",
   icon_size = 64,
   flags = {"placeable-neutral", "player-creation"},
-  minable = {mining_time = 1, result = "sign-post"},
+  minable = {mining_time = 2.5, result = "sign-post"},
   max_health = 50,
   corpse = "small-remnants",
   collision_box = {{-0.29, -0.29}, {0.29, 0.29}},

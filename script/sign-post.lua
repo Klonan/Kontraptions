@@ -312,6 +312,7 @@ local on_entity_settings_pasted = function(event)
   destination_data.text = sign_post_data.text
   destination_data.admins_only = sign_post_data.admins_only
   destination_data.always_show_message = sign_post_data.always_show_message
+  clear_tooltip(destination_data)
   update_tooltip(destination_data)
 
 end
