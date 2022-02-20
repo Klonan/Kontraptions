@@ -15,6 +15,13 @@ local moving_types =
   "construction-robot",
 }
 
+local ground_motion =
+{
+  ["car"] = true,
+  ["character"] = true,
+  ["unit"] = true
+}
+
 local target_mask_defaults = data.raw["utility-constants"].default.default_trigger_target_mask_by_type
 
 for k, type in pairs(moving_types) do
@@ -26,6 +33,9 @@ for k, type in pairs(moving_types) do
       prototype.trigger_target_mask = util.copy(target_mask_defaults[type]) or {"common"}
     end
     table.insert(prototype.trigger_target_mask, "motion")
+    if ground_motion[type] then
+      table.insert(prototype.trigger_target_mask, "ground-motion")
+    end
     log(prototype.name .. serpent.line(prototype.trigger_target_mask))
   end
 end

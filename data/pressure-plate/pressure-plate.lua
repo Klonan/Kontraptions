@@ -74,7 +74,20 @@ local pressure_plate =
     connection_point(),
     connection_point()
   },
-  circuit_wire_max_distance = DETECTION_RANGE,
+  circuit_wire_max_distance = 20,
+  created_effect =
+  {
+    type = "direct",
+    action_delivery =
+    {
+      type = "instant",
+      source_effects =
+      {
+        type = "script",
+        effect_id = "pressure-plate-created"
+      }
+    }
+  }
 
 }
 
@@ -90,8 +103,80 @@ local item =
   stack_size = 10
 }
 
+local pressure_plate_turret =
+{
+  type = "turret",
+  name = "pressure-plate-turret",
+  attack_target_mask = {"ground-motion"},
+  icon = "__Kontraptions__/data/motion-sensor/enemy-motion-sensor-icon.png",
+  icon_size = 64,
+  selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
+  selectable_in_game = false,
+  collision_mask = {},
+  is_military_target = false,
+  flags = {"placeable-player", "player-creation", "not-blueprintable", "not-deconstructable"},
+  --minable = {mining_time = 0.5, result = "enemy-motion-sensor"},
+  max_health = 100,
+  corpse = "small-remnants",
+  collision_box = {{-0.2, -0.2}, {0.2, 0.2}},
+  selection_priority = 10,
+  attack_parameters =
+  {
+    type = "projectile",
+    cooldown = 60,
+    range = 0.325,
+    min_range = 0,
+    --turn_range = 1,
+    ammo_type =
+    {
+      category = "melee",
+      energy_consumption = "50J",
+      action =
+      {
+        type = "direct",
+        action_delivery =
+        {
+          type = "instant",
+          target_effects =
+          {
+            type = "script",
+            effect_id = "motion-sensor-triggered"
+          }
+        }
+      }
+    }
+  },
+  base_picture =
+  {
+    north = sprite(),
+    east = sprite(),
+    south = sprite(),
+    west = sprite(),
+  },
+  folded_animation = util.empty_sprite(),
+  turret_base_has_direction = true,
+  call_for_help_radius = 0,
+  energy_source =
+  {
+    type = "void",
+    buffer_capacity = "1kJ",
+    usage_priority = "primary-input",
+    input_flow_limit = "1kW",
+    drain = "100W"
+  }
+}
+
+local target_mask =
+{
+  name = "ground-motion",
+  type = "trigger-target-type"
+}
+
+
 data:extend
 {
   pressure_plate,
-  item
+  item,
+  pressure_plate_turret,
+  target_mask
 }

@@ -145,13 +145,43 @@ local on_friendly_motion_sensor_combinator_created = function(event)
   init_pair(turret, combinator)
 end
 
+local force_name = "enemy-to-all"
+local get_enemy_to_all_force = function()
+  local force = game.forces[force_name]
+  if (force and force.valid) then return force end
+
+  force = game.create_force(force_name)
+  for k, other in pairs (game.forces) do
+    force.set_friend(other, false)
+    force.set_cease_fire(other, false)
+  end
+  return force
+end
+
+
+local on_pressure_plate_created = function(event)
+  --game.print("Pressure plate created")
+
+  local combinator = event.source_entity
+
+  local turret = combinator.surface.create_entity
+  {
+    name = "pressure-plate-turret",
+    position = combinator.position,
+    force = get_enemy_to_all_force(),
+    direction = combinator.direction
+  }
+  init_pair(turret, combinator)
+end
+
 local triggers =
 {
   ["motion-sensor-triggered"] = on_motion_sensor_triggered,
   ["enemy-motion-sensor-created"] = on_enemy_motion_sensor_created,
   ["enemy-motion-sensor-combinator-created"] = on_enemy_motion_sensor_combinator_created,
   ["friendly-motion-sensor-created"] = on_friendly_motion_sensor_created,
-  ["friendly-motion-sensor-combinator-created"] = on_friendly_motion_sensor_combinator_created
+  ["friendly-motion-sensor-combinator-created"] = on_friendly_motion_sensor_combinator_created,
+  ["pressure-plate-created"] = on_pressure_plate_created
 }
 
 local on_script_trigger_effect = function(event)
