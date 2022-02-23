@@ -1,11 +1,11 @@
 local sprite = function()
   return
   {
-    filename = "__base__/graphics/entity/wooden-chest/hr-wooden-chest.png",
+    filename = "__Kontraptions__/data/pressure-plate/pressure-plate.png",
     priority = "extra-high",
-    width = 62,
-    height = 72,
-    shift = util.by_pixel(0.5, -2),
+    width = 100,
+    height = 100,
+    shift = util.by_pixel(0, 0),
     scale = 0.5
   }
 end
@@ -15,13 +15,13 @@ local connection_point = function()
   {
     wire =
     {
-      red = {-26/64, -5/64},
-      green = {-22/64, -21/64},
+      red = {14/64, 9/64},
+      green = {20/64, 18/64},
     },
     shadow =
     {
-      red = {0, 0},
-      green = {0, 0}
+      red = {18/64, 28/64},
+      green = {24/64, 30/64}
     }
   }
 end
