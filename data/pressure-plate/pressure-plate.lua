@@ -4,7 +4,7 @@ local sprite = function()
     filename = "__Kontraptions__/data/pressure-plate/pressure-plate.png",
     priority = "extra-high",
     width = 100,
-    height = 100,
+    height = 99,
     shift = util.by_pixel(0, 0),
     scale = 0.5
   }
@@ -43,10 +43,10 @@ local pressure_plate =
 
   sprites =
   {
-    north = sprite(),
-    east = sprite(),
-    south = sprite(),
-    west = sprite()
+    north = util.empty_sprite(),
+    east = util.empty_sprite(),
+    south = util.empty_sprite(),
+    west = util.empty_sprite()
   },
   activity_led_sprites =
   {
@@ -87,6 +87,21 @@ local pressure_plate =
         effect_id = "pressure-plate-created"
       }
     }
+  },
+  radius_visualisation_specification =
+  {
+    sprite =
+    {
+      layers =
+      {
+        sprite(),
+        sprite(),
+        sprite(),
+      }
+    },
+    distance = 0.64,
+    draw_on_selection = false,
+    draw_in_cursor = true
   }
 
 }
