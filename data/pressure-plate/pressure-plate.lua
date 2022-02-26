@@ -3,8 +3,8 @@ local sprite = function()
   {
     filename = "__Kontraptions__/data/pressure-plate/pressure-plate.png",
     priority = "extra-high",
-    width = 100,
-    height = 99,
+    width = 64,
+    height = 64,
     shift = util.by_pixel(0, 0),
     scale = 0.5
   }
@@ -30,7 +30,9 @@ local pressure_plate =
 {
   type = "constant-combinator",
   name = "pressure-plate",
-  icon = "__base__/graphics/icons/constant-combinator.png",
+  localised_name = {"pressure-plate"},
+  localised_description = {"pressure-plate-description"},
+  icon = "__Kontraptions__/data/pressure-plate/pressure-plate.png",
   icon_size = 64,
   flags = {"placeable-neutral", "player-creation", "not-rotatable"},
   minable = {hardness = 0.2, mining_time = 0.5, result = "pressure-plate"},
@@ -99,7 +101,7 @@ local pressure_plate =
         sprite(),
       }
     },
-    distance = 0.64,
+    distance = 0.5,
     draw_on_selection = false,
     draw_in_cursor = true
   }
@@ -110,10 +112,10 @@ local item =
 {
   type = "item",
   name = "pressure-plate",
-  icon = "__base__/graphics/icons/constant-combinator.png",
+  icon = "__Kontraptions__/data/pressure-plate/pressure-plate.png",
   icon_size = 64,
   subgroup = "circuit-network",
-  order = "a[combinators]-a[constant-combinator]",
+  order = "k[kontraptions]-p[pressure-plate]",
   place_result = "pressure-plate",
   stack_size = 10
 }
@@ -123,7 +125,7 @@ local pressure_plate_turret =
   type = "turret",
   name = "pressure-plate-turret",
   attack_target_mask = {"ground-motion"},
-  icon = "__Kontraptions__/data/motion-sensor/enemy-motion-sensor-icon.png",
+  icon = "__Kontraptions__/data/pressure-plate/pressure-plate.png",
   icon_size = 64,
   selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
   selectable_in_game = false,
@@ -187,11 +189,56 @@ local target_mask =
   type = "trigger-target-type"
 }
 
+local pressure_plate_recipe =
+{
+  type = "recipe",
+  name = "pressure-plate",
+  enabled = false,
+  ingredients =
+  {
+    {"copper-plate", 2},
+    {"iron-plate", 2},
+    {"electronic-circuit", 1}
+  },
+  result = "pressure-plate"
+}
+
+local pressure_plate_technology =
+{
+  type = "technology",
+  name = "pressure-plate",
+  localised_name = {"pressure-plate"},
+  localised_description = {"pressure-plate-description"},
+  icon = "__Kontraptions__/data/pressure-plate/pressure-plate-tech-icon.png",
+  icon_size = 128,
+  effects =
+  {
+    {
+      type = "unlock-recipe",
+      recipe = "pressure-plate"
+    }
+  },
+  prerequisites = {"circuit-network"},
+  unit =
+  {
+    count = 150,
+    ingredients =
+    {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1}
+    },
+    time = 30
+  },
+  order = "a-d-a"
+}
+
 
 data:extend
 {
   pressure_plate,
   item,
   pressure_plate_turret,
-  target_mask
+  target_mask,
+  pressure_plate_recipe,
+  pressure_plate_technology
 }
