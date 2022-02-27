@@ -18,7 +18,7 @@ local sprite =
       width = 23,
       height = 15,
       frame_count = 4,
-      shift = {0, -94/64},
+      shift = {-1/64, -94/64},
       scale = 0.5
     },
     {
@@ -65,7 +65,7 @@ local pollution_sensor =
   discharge_cooldown = 65000,
   charge_light = {intensity = 0, size = 0},
   circuit_wire_max_distance = 12,
-  default_output_signal = {type = "item", name = "solar-panel"},
+  default_output_signal = {type = "item", name = "pollution-sensor"},
   created_effect =
   {
     type = "direct",
