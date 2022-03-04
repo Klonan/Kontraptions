@@ -29,6 +29,7 @@ local on_script_trigger_effect = function(event)
     trigger(event)
   end
 end
+
 local floor = math.floor
 local get_daylight = function(surface)
   local daytime = surface.daytime

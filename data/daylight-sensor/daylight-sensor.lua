@@ -70,6 +70,9 @@ local daylight_sensor =
   },
   circuit_wire_connection_point = circuit_connector_definitions["lamp"].points,
   circuit_connector_sprites = circuit_connector_definitions["lamp"].sprites,
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local daylight_sensor_item =

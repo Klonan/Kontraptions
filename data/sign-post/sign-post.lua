@@ -83,7 +83,10 @@ local sign_post =
   horizontal_window_bounding_box = {{-0.25, -0.28125}, {0.25, 0.15625}},
   vertical_window_bounding_box = {{-0.28125, -0.5}, {0.03125, 0.125}},
   allow_copy_paste = true,
-  additional_pastable_entities = {"sign-post"}
+  additional_pastable_entities = {"sign-post"},
+  vehicle_impact_sound = sounds.car_wood_impact(0.5),
+  open_sound = { filename = "__base__/sound/wooden-chest-open.ogg", volume = 0.6 },
+  close_sound = { filename = "__base__/sound/wooden-chest-close.ogg", volume = 0.6 },
 
 }
 

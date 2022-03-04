@@ -81,6 +81,9 @@ local pollution_sensor =
   },
   circuit_wire_connection_point = circuit_connector_definitions["programmable-speaker"].points,
   circuit_connector_sprites = circuit_connector_definitions["programmable-speaker"].sprites,
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local pollution_sensor_item =

@@ -136,6 +136,9 @@ data:extend{
       usage_priority = "secondary-output",
       buffer_capacity = "1TW",
       render_no_network_icon = false
-    }
+    },
+    vehicle_impact_sound = sounds.car_wood_impact(0.5),
+    open_sound = { filename = "__base__/sound/wooden-chest-open.ogg", volume = 0.6 },
+    close_sound = { filename = "__base__/sound/wooden-chest-close.ogg", volume = 0.6 },
   }
 }

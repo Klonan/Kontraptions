@@ -143,7 +143,10 @@ local enemy_motion_sensor =
         effect_id = "enemy-motion-sensor-created"
       }
     }
-  }
+  },
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local enemy_item =
@@ -221,7 +224,10 @@ local enemy_invisible_combinator =
         effect_id = "enemy-motion-sensor-combinator-created"
       }
     }
-  }
+  },
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local friendly_motion_sensor =
@@ -304,7 +310,10 @@ local friendly_motion_sensor =
         effect_id = "friendly-motion-sensor-created"
       }
     }
-  }
+  },
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local friendly_item =
@@ -382,7 +391,10 @@ local friendly_invisible_combinator =
         effect_id = "friendly-motion-sensor-combinator-created"
       }
     }
-  }
+  },
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local enemy_recipe =

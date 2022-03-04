@@ -180,7 +180,10 @@ local pressure_plate_turret =
     usage_priority = "primary-input",
     input_flow_limit = "1kW",
     drain = "100W"
-  }
+  },
+  vehicle_impact_sound = sounds.generic_impact,
+  open_sound = sounds.machine_open,
+  close_sound = sounds.machine_close,
 }
 
 local target_mask =

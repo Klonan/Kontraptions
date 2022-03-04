@@ -6,3 +6,5 @@ require("__Kontraptions__/data/automatic-circuit-wire/automatic-circuit-wire")
 require("__Kontraptions__/data/sign-post/sign-post")
 require("__Kontraptions__/data/torches/torches")
 require("__Kontraptions__/data/pressure-plate/pressure-plate")
+require("__Kontraptions__/data/circuit-network-transceiver/circuit-network-transceiver")
+
