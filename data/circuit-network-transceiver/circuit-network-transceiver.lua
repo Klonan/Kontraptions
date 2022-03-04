@@ -2,6 +2,8 @@ local transceiver =
 {
   type = "storage-tank",
   name = "circuit-network-transceiver",
+  localised_name = {"circuit-network-transceiver"},
+  localised_description = {"circuit-network-transceiver-description"},
   icon = "__base__/graphics/icons/storage-tank.png",
   icon_size = 64,
   flags = {"placeable-player", "player-creation", "not-rotatable"},

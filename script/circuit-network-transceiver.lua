@@ -79,12 +79,57 @@ local on_tick = function(event)
 
 end
 
+local on_robot_built_entity = function(event)
+  -- Fires AFTER the script creation trigger.
+end
+
+
+local transceiver_opened = function(entity, player)
+
+  local transceiver_data = script_data.transceivers[unit_number]
+  local relative_gui = player.gui.relative.transceiver_gui
+  if not relative_gui then
+    relative_gui = player.gui.relative.add
+    {
+      type = "frame",
+      name = "transceiver_gui",
+      caption = "Transceiver settings",
+      direction = "vertical",
+      anchor =
+      {
+        gui = defines.relative_gui_type.storage_tank_gui,
+        name = entity.name,
+        position = defines.relative_gui_position.bottom
+      }
+    }
+  end
+  relative_gui.clear()
+  relative_gui.style.horizontally_stretchable = false
+  local inner = relative_gui.add
+  {
+    type = "frame",
+    direction = "vertical",
+    style = "entity_frame"
+  }
+end
+
+local on_gui_opened = function(event)
+  local entity = event.entity
+  if not (entity and entity.valid) then return end
+  if entity.name ~= "circuit-network-transceiver" then return end
+  local player = game.get_player(event.player_index)
+  if not (player and player.valid) then return end
+  transceiver_opened(entity, player)
+end
+
 local lib = {}
 
 lib.events =
 {
+  [defines.events.on_gui_opened] = on_gui_opened,
   [defines.events.on_tick] = on_tick,
-  [defines.events.on_script_trigger_effect] = on_script_trigger_effect
+  [defines.events.on_script_trigger_effect] = on_script_trigger_effect,
+  [defines.events.on_robot_built_entity] = on_robot_built_entity,
 }
 
 lib.on_init = function()
