@@ -82,16 +82,16 @@ local item =
 
 local electric_source =
 {
-  type = "electric-energy-interface",
+  type = "radar",
   name = "circuit-network-transciever-electric-source",
-  icons = { {icon = "__base__/graphics/icons/accumulator.png", tint = {r=1, g=0.8, b=1, a=1}} },
+  localised_name = transceiver.localised_name,
+  icon = transceiver.icon,
   icon_size = 64,
   flags = {},
   max_health = 15000,
   subgroup = "other",
   collision_box = {{-0.9, -0.9}, {0.9, 0.9}},
   selection_box = {{-1, -1}, {1, 1}},
-  gui_mode = "none",
   allow_copy_paste = false,
   selectable_in_game = false,
   energy_source =
@@ -102,7 +102,11 @@ local electric_source =
   },
   energy_production = "0W",
   energy_usage = "500kW",
-  picture = util.empty_sprite()
+  pictures = util.empty_sprite(),
+  energy_per_sector = "1J",
+  energy_per_nearby_scan = "1J",
+  max_distance_of_sector_revealed = 0,
+  max_distance_of_nearby_sector_revealed = 0,
 }
 
 data:extend
