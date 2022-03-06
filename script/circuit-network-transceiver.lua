@@ -21,7 +21,7 @@ local transceiver_created = function(event)
   local entity = event.source_entity
   if not (entity and entity.valid) then return end
 
-  game.print("HEUK")
+  --game.print("HEUK")
 
   local electric_source = entity.surface.create_entity
   {
@@ -32,6 +32,9 @@ local transceiver_created = function(event)
   electric_source.destructible = false
   electric_source.minable = false
   electric_source.active = false
+  if electric_source.is_connected_to_electric_network() then
+    electric_source.energy = 10
+  end
 
   local transceiver_data =
   {
@@ -39,7 +42,6 @@ local transceiver_created = function(event)
     channel = "",
     electric_source = electric_source,
     connected = false,
-    status_labels = {}
   }
   script_data.transceivers[entity.unit_number] = transceiver_data
   add_to_update_schedule(entity.unit_number)
@@ -58,9 +60,6 @@ local on_script_trigger_effect = function(event)
   end
 end
 
-local on_robot_built_entity = function(event)
-  -- Fires AFTER the script creation trigger.
-end
 
 local get_status_caption = function(connected)
   return connected and "[img=utility/status_working] Connected" or "[img=utility/status_not_working] Disconnected"
@@ -93,28 +92,6 @@ local transceiver_opened = function(entity, player)
     direction = "vertical",
     style = "entity_frame"
   }
-
-  local status_flow = inner.add
-  {
-    type = "flow",
-    direction = "horizontal"
-  }
-
-  status_flow.add
-  {
-    type = "label",
-    caption = "Status:",
-    style = "caption_label"
-  }
-
-  local status_label = status_flow.add
-  {
-    type = "label",
-    name = "status_label",
-    caption = get_status_caption(transceiver_data.connected)
-  }
-
-  table.insert(transceiver_data.status_labels, status_label)
 
   local flow = inner.add
   {
@@ -149,18 +126,17 @@ local transceiver_opened = function(entity, player)
 
 end
 
-local get_channels_list = function(current)
-  local channels = {}
-  local index = 0
+local remark_begin = " [color=34, 181, 255]["
+local remark_end = "][/color]"
+local add_channels_to_list_box = function(listbox, current)
   local k = 1
-  for channel_name, channel in pairs(script_data.channels) do
-    channels[k] = channel_name
-    if channel_name == current then
-      index = k
+  for name, channel in pairs(script_data.channels) do
+    listbox.add_item(name..remark_begin..table_size(channel.transceivers)..remark_end)
+    if name == current then
+      listbox.selected_index = k
     end
     k = k + 1
   end
-  return channels, index
 end
 
 local open_set_channel_window = function(gui)
@@ -239,15 +215,13 @@ local open_set_channel_window = function(gui)
     style = "item_and_count_select_confirm",
     tags = {gui_action = "set_transceiver_channel_confirm"}
   }
-  local list, selected_index = get_channels_list(transceiver_data.channel)
   local listbox = inner_frame.add
   {
     type = "list-box",
     name = "channel_list",
-    items = list,
     tags = {gui_action = "copy_selected_channel"}
   }
-  listbox.selected_index = selected_index
+  add_channels_to_list_box(listbox, transceiver_data.channel)
   listbox.style.horizontally_stretchable = true
   listbox.style.minimal_height = 250
   listbox.style.maximal_width = 500
@@ -357,15 +331,20 @@ local set_transceiver_channel = function(unit_number, new_channel)
   update_transceiver(unit_number)
 end
 
-local confirm_transciever_channel_from_textfield = function(gui)
+local confirm_transciever_channel_from_textfield = function(gui, skip_sound)
   local player = game.get_player(gui.player_index)
   if not player then return end
   local opened = player.opened
   if not opened then return end
   local unit_number = opened.tags.opened_unit_number
   if not unit_number then return end
+  local channel = gui.text
+
   set_transceiver_channel(unit_number, gui.text)
   player.opened = nil
+  if not skip_sound then
+    player.play_sound{path = "utility/confirm"}
+  end
 end
 
 local copy_selected_channel_from_listbox = function(gui)
@@ -374,7 +353,14 @@ local copy_selected_channel_from_listbox = function(gui)
   local selected = gui.selected_index
   if selected < 1 then return end
 
-  textfield.text = gui.get_item(selected)
+  local channel = gui.get_item(selected)
+  local l = channel:find(remark_begin, 1, true)
+  if l then
+    channel = channel:sub(1, l-1)
+  end
+  game.print(channel)
+
+  textfield.text = channel
 
 end
 
@@ -389,7 +375,7 @@ end
 local gui_click_actions =
 {
   change_transceiver_channel = open_set_channel_window,
-  set_transceiver_channel_confirm = function(gui) confirm_transciever_channel_from_textfield(gui.parent.children[1]) end,
+  set_transceiver_channel_confirm = function(gui) confirm_transciever_channel_from_textfield(gui.parent.children[1], true) end,
   close_set_channel_window  = close_opened_window
 }
 
@@ -409,7 +395,7 @@ local on_gui_opened = function(event)
   if entity.name ~= "circuit-network-transceiver" then return end
   local player = game.get_player(event.player_index)
   if not (player and player.valid) then return end
-  game.print("OPEN")
+  --game.print("OPEN")
   transceiver_opened(entity, player)
 end
 
@@ -464,6 +450,119 @@ local on_tick = function(event)
 
 end
 
+local on_entity_settings_pasted = function(event)
+  local destination = event.destination
+  local source = event.source
+  if not (destination and destination.valid) then return end
+  if not (source and source.valid) then return end
+  if destination.name ~= "circuit-network-transceiver" then return end
+  if source.name ~= "circuit-network-transceiver" then return end
+  local transceiver_data = script_data.transceivers[source.unit_number]
+  if not transceiver_data then return end
+
+  set_transceiver_channel(destination.unit_number, transceiver_data.channel)
+
+end
+
+local clear_transceiver_data = function(unit_number)
+  local transceiver_data = script_data.transceivers[unit_number]
+  if not transceiver_data then return end
+  local electric_source = transceiver_data.electric_source
+  if electric_source and electric_source.valid then
+    electric_source.destroy()
+  end
+  script_data.transceivers[unit_number] = nil
+end
+
+local on_entity_destroyed = function(event)
+  local unit_number = event.unit_number
+  if not unit_number then return end
+  clear_transceiver_data(unit_number)
+end
+
+local save_to_blueprint_tags = function(unit_number)
+
+  local transceiver_data = script_data.transceivers[unit_number]
+  if not transceiver_data then return end
+
+  return
+  {
+    channel = transceiver_data.channel,
+  }
+end
+
+local on_post_entity_died = function(event)
+  local unit_number = event.unit_number
+  if not unit_number then return end
+
+  local ghost = event.ghost
+  if not (ghost and ghost.valid) then return end
+
+  local tags = ghost.tags or {}
+  tags.transceiver_data = save_to_blueprint_tags(unit_number)
+  ghost.tags = tags
+
+end
+
+
+local on_player_setup_blueprint = function(event)
+  local player = game.get_player(event.player_index)
+  if not (player and player.valid) then return end
+
+  local item = player.cursor_stack
+  if not (item and item.valid_for_read) then
+    item = player.blueprint_to_setup
+    if not (item and item.valid_for_read) then return end
+  end
+
+  local count = item.get_blueprint_entity_count()
+  if count == 0 then return end
+
+  for index, entity in pairs(event.mapping.get()) do
+    if entity.valid and entity.name == "circuit-network-transceiver" then
+      local save_tags = save_to_blueprint_tags(entity.unit_number)
+      if save_tags then
+        if index <= count then
+          item.set_blueprint_entity_tag(index, "transceiver_data", save_tags)
+        end
+      end
+    end
+  end
+
+end
+
+local ghost_revived_event = function(event)
+  local entity = event.created_entity or event.entity
+  if not (entity and entity.valid) then return end
+  if entity.name ~= "circuit-network-transceiver" then return end
+
+  local tags = event.tags
+  if not tags then return end
+
+  local transceiver_tags = tags.transceiver_data
+  if not transceiver_tags then return end
+
+  local channel = transceiver_tags.channel
+  if not channel then return end
+
+  set_transceiver_channel(entity.unit_number, channel)
+
+end
+
+local confirm_hotkey = function(event)
+  local player = game.get_player(event.player_index)
+  if not (player and player.valid) then return end
+  if player.opened_gui_type ~= defines.gui_type.custom then return end
+
+  local gui = player.opened
+  if not (gui and gui.valid) then return end
+
+  local textfield = gui.children[2].children[1].children[1]
+  if not (textfield and textfield.valid) then return end
+  confirm_transciever_channel_from_textfield(textfield)
+
+end
+
 local lib = {}
 
 lib.events =
@@ -475,7 +574,13 @@ lib.events =
   [defines.events.on_gui_confirmed] = on_gui_confirm,
   [defines.events.on_tick] = on_tick,
   [defines.events.on_script_trigger_effect] = on_script_trigger_effect,
-  [defines.events.on_robot_built_entity] = on_robot_built_entity,
+  [defines.events.on_robot_built_entity] = ghost_revived_event,
+  [defines.events.script_raised_revive] = ghost_revived_event,
+  [defines.events.on_player_setup_blueprint] = on_player_setup_blueprint,
+  [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
+  [defines.events.on_entity_destroyed] = on_entity_destroyed,
+  [defines.events.on_post_entity_died] = on_post_entity_died,
+  ["confirm-hotkey"] = confirm_hotkey,
 }
 
 lib.on_init = function()

@@ -317,9 +317,9 @@ local on_entity_settings_pasted = function(event)
 
 end
 
-local save_to_blueprint_tags = function(sign_post)
+local save_to_blueprint_tags = function(unit_number)
 
-  local sign_post_data = script_data.sign_posts[sign_post.unit_number]
+  local sign_post_data = script_data.sign_posts[unit_number]
   if not sign_post_data then return end
 
   return
@@ -344,7 +344,7 @@ local on_player_setup_blueprint = function(event)
 
   for index, entity in pairs(event.mapping.get()) do
     if entity.valid and entity.name == "sign-post" then
-      local save_tags = save_to_blueprint_tags(entity)
+      local save_tags = save_to_blueprint_tags(entity.unit_number)
       if save_tags then
         if index <= count then
           item.set_blueprint_entity_tag(index, "sign_post_data", save_tags)
@@ -355,13 +355,7 @@ local on_player_setup_blueprint = function(event)
 
 end
 
-local on_robot_built_entity = function(event)
-  local entity = event.created_entity
-  if not (entity and entity.valid) then return end
-  if entity.name ~= "sign-post" then return end
-
-  local tags = event.tags
-  if not tags then return end
+local restore_data_from_tags = function(entity, tags)
 
   local sign_post_tags = tags.sign_post_data
   if not sign_post_tags then return end
@@ -375,10 +369,36 @@ local on_robot_built_entity = function(event)
   --game.print("Loaded tags from blueprint")
 end
 
+local ghost_revived_event = function(event)
+  local entity = event.created_entity or event.entity
+  if not (entity and entity.valid) then return end
+  if entity.name ~= "sign-post" then return end
+
+  local tags = event.tags
+  if not tags then return end
+
+  restore_data_from_tags(entity, tags)
+end
+
 local on_entity_destroyed = function(event)
   if event.unit_number then
     script_data.sign_posts[event.unit_number] = nil
   end
+end
+
+local on_post_entity_died = function(event)
+  local unit_number = event.unit_number
+  if not unit_number then return end
+
+  local sign_post_data = script_data.sign_posts[unit_number]
+  if not sign_post_data then return end
+
+  local ghost = event.ghost
+  if not (ghost and ghost.valid) then return end
+
+  local tags = ghost.tags or {}
+  tags.sign_post_data = save_to_blueprint_tags(unit_number)
+  ghost.tags = tags
 end
 
 local lib = {}
@@ -392,8 +412,11 @@ lib.events =
   [defines.events.on_tick] = on_tick,
   [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
   [defines.events.on_player_setup_blueprint] = on_player_setup_blueprint,
-  [defines.events.on_robot_built_entity] = on_robot_built_entity,
-  [defines.events.on_entity_destroyed] = on_entity_destroyed
+  [defines.events.on_robot_built_entity] = ghost_revived_event,
+  [defines.events.on_entity_destroyed] = on_entity_destroyed,
+  [defines.events.on_post_entity_died] = on_post_entity_died,
+  [defines.events.script_raised_revive] = ghost_revived_event,
+
 }
 
 lib.on_init = function()
