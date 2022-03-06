@@ -21,12 +21,11 @@ local transceiver_created = function(event)
   local entity = event.source_entity
   if not (entity and entity.valid) then return end
 
-  --game.print("HEUK")
-
+  local position = entity.position
   local electric_source = entity.surface.create_entity
   {
     name = "circuit-network-transciever-electric-source",
-    position = {entity.position.x, entity.position.y + 0.1},
+    position = {position.x, position.y + 0.1},
     force = entity.force
   }
   electric_source.destructible = false
@@ -58,11 +57,6 @@ local on_script_trigger_effect = function(event)
   if trigger then
     trigger(event)
   end
-end
-
-
-local get_status_caption = function(connected)
-  return connected and "[img=utility/status_working] Connected" or "[img=utility/status_not_working] Disconnected"
 end
 
 local remark_begin = " [color=34, 181, 255]["
@@ -223,6 +217,7 @@ local open_set_channel_window = function(gui)
     tags = {gui_action = "set_transceiver_channel_confirm"},
     tooltip = {"gui.confirm"}
   }
+
   local listbox = inner_frame.add
   {
     type = "list-box",
@@ -238,29 +233,27 @@ local open_set_channel_window = function(gui)
   player.opened = frame
 end
 
-local surface_name = "transciever_channel_surface"
+local surface_name = "transceiver_channel_surface"
 local get_transciever_surface = function()
-  local surface = game.surfaces[surface_name]
-  if not surface then
-    surface = game.create_surface(surface_name, {width = 1, height = 1})
-  end
-  return surface
+  return game.surfaces[surface_name] or game.create_surface(surface_name, {width = 1, height = 1})
 end
 
 local get_channel_data_safe = function(name)
   local channel_data = script_data.channels[name]
-  if not channel_data then
-    local pole = get_transciever_surface().create_entity{name = "small-electric-pole", position = {0, 0}}
-    pole.disconnect_neighbour()
-    pole.destructible = false
-    pole.minable = false
-    channel_data =
-    {
-      pole = pole,
-      transceivers = {}
-    }
-    script_data.channels[name] = channel_data
+  if channel_data then
+    return channel_data
   end
+
+  local pole = get_transciever_surface().create_entity{name = "small-electric-pole", position = {0, 0}}
+  pole.disconnect_neighbour()
+  pole.destructible = false
+  pole.minable = false
+  channel_data =
+  {
+    pole = pole,
+    transceivers = {}
+  }
+  script_data.channels[name] = channel_data
   return channel_data
 end
 
@@ -328,6 +321,7 @@ local set_transceiver_channel = function(unit_number, new_channel)
   if not transceiver_data then return end
   local old_channel = transceiver_data.channel
   if old_channel == new_channel then return end
+
   if old_channel ~= "" then
     disconnect_from_channel(unit_number, old_channel, true)
   end
@@ -346,7 +340,6 @@ local confirm_transciever_channel_from_textfield = function(gui, skip_sound)
   if not opened then return end
   local unit_number = opened.tags.opened_unit_number
   if not unit_number then return end
-  local channel = gui.text
 
   set_transceiver_channel(unit_number, gui.text)
   player.opened = nil
@@ -355,6 +348,8 @@ local confirm_transciever_channel_from_textfield = function(gui, skip_sound)
   end
 end
 
+local find = string.find
+local sub = string.sub
 local copy_selected_channel_from_listbox = function(gui)
   local textfield = gui.parent.children[1].children[1]
   if not textfield then return end
@@ -362,11 +357,10 @@ local copy_selected_channel_from_listbox = function(gui)
   if selected < 1 then return end
 
   local channel = gui.get_item(selected)
-  local l = channel:find(remark_begin, 1, true)
+  local l = find(channel, remark_begin, 1, true)
   if l then
-    channel = channel:sub(1, l-1)
+    channel = sub(channel, 1, l-1)
   end
-  --game.print(channel)
 
   textfield.text = channel
 
@@ -430,13 +424,18 @@ local on_gui_closed = function(event)
   local gui = event.element
   if not (gui and gui.valid) then return end
   if gui.name ~= "set_channel_window" then return end
+
   local last_opened = gui.tags.opened_unit_number
   gui.destroy()
+
   if not last_opened then return end
+
   local player = game.get_player(event.player_index)
   if not (player and player.valid) then return end
+
   local transceiver_data = script_data.transceivers[last_opened]
   if not transceiver_data then return end
+
   local entity = transceiver_data.entity
   if not (entity and entity.valid) then return end
   player.opened = entity
@@ -459,12 +458,15 @@ local on_tick = function(event)
 end
 
 local on_entity_settings_pasted = function(event)
+
   local destination = event.destination
-  local source = event.source
   if not (destination and destination.valid) then return end
-  if not (source and source.valid) then return end
   if destination.name ~= "circuit-network-transceiver" then return end
+
+  local source = event.source
+  if not (source and source.valid) then return end
   if source.name ~= "circuit-network-transceiver" then return end
+
   local transceiver_data = script_data.transceivers[source.unit_number]
   if not transceiver_data then return end
 
@@ -475,11 +477,17 @@ end
 local clear_transceiver_data = function(unit_number)
   local transceiver_data = script_data.transceivers[unit_number]
   if not transceiver_data then return end
+  script_data.transceivers[unit_number] = nil
+
   local electric_source = transceiver_data.electric_source
   if electric_source and electric_source.valid then
     electric_source.destroy()
   end
-  script_data.transceivers[unit_number] = nil
+
+  local channel_data = script_data.channels[transceiver_data.channel]
+  if channel_data then
+    channel_data.transceivers[unit_number] = nil
+  end
 end
 
 local on_entity_destroyed = function(event)

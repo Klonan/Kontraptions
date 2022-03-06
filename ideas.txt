@@ -1,13 +1,13 @@
-~Motion sensor
+~ Motion sensor
 Tree harvesting roomba
 Lawnmower roomba
 Long range drone delivery
-~remote explosive (TNT)
-~Pressure plate
-~daylight sensor
+~ remote explosive (TNT)
+~ Pressure plate
+~ daylight sensor
 push button
 lever
 mini-train
 dispenser (heals)
 mini-turret capsule
-circuit-network transciever
+~ circuit-network transciever
