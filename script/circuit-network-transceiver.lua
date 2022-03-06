@@ -65,6 +65,9 @@ local get_status_caption = function(connected)
   return connected and "[img=utility/status_working] Connected" or "[img=utility/status_not_working] Disconnected"
 end
 
+local remark_begin = " [color=34, 181, 255]["
+local remark_end = "][/color]"
+
 local transceiver_opened = function(entity, player)
 
   local transceiver_data = script_data.transceivers[entity.unit_number]
@@ -74,7 +77,7 @@ local transceiver_opened = function(entity, player)
     {
       type = "frame",
       name = "transceiver_gui",
-      caption = "Transceiver settings",
+      caption = {"transceiver-settings"},
       direction = "vertical",
       anchor =
       {
@@ -98,23 +101,28 @@ local transceiver_opened = function(entity, player)
     type = "flow",
     direction = "horizontal",
   }
+  flow.style.vertical_align = "center"
 
   flow.add
   {
     type = "label",
-    caption = "Channel:",
+    caption = {"channel"},
     style = "caption_label"
   }
 
   local caption = transceiver_data.channel
   if caption == "" then
-    caption = "[NO CHANNEL SET]"
+    caption = {"no-channel-set"}
+  else
+    local channel_data = script_data.channels[caption]
+    caption = caption..remark_begin..table_size(channel_data.transceivers)..remark_end
   end
-  flow.add
+  local channel_label = flow.add
   {
     type = "label",
     caption = caption
   }
+  channel_label.style.maximal_width = 320
 
   flow.add
   {
@@ -122,12 +130,11 @@ local transceiver_opened = function(entity, player)
     sprite = "utility/rename_icon_small_black",
     style = "mini_button_aligned_to_text_vertically_when_centered",
     tags = {gui_action = "change_transceiver_channel"},
+    tooltip = {"set-transceiver-channel"}
   }
 
 end
 
-local remark_begin = " [color=34, 181, 255]["
-local remark_end = "][/color]"
 local add_channels_to_list_box = function(listbox, current)
   local k = 1
   for name, channel in pairs(script_data.channels) do
@@ -162,7 +169,7 @@ local open_set_channel_window = function(gui)
   local title = header_flow.add
   {
     type = "label",
-    caption = "Set transciever channel",
+    caption = {"set-transceiver-channel"},
     style = "frame_title"
   }
   title.drag_target = frame
@@ -179,7 +186,7 @@ local open_set_channel_window = function(gui)
     type = "sprite-button",
     sprite = "utility/close_white",
     style = "close_button",
-    tooltip = "Close",
+    tooltip = {"gui.close"},
     tags = {gui_action = "close_set_channel_window"}
   }
 
@@ -213,7 +220,8 @@ local open_set_channel_window = function(gui)
     type = "sprite-button",
     sprite = "utility/enter",
     style = "item_and_count_select_confirm",
-    tags = {gui_action = "set_transceiver_channel_confirm"}
+    tags = {gui_action = "set_transceiver_channel_confirm"},
+    tooltip = {"gui.confirm"}
   }
   local listbox = inner_frame.add
   {
@@ -358,7 +366,7 @@ local copy_selected_channel_from_listbox = function(gui)
   if l then
     channel = channel:sub(1, l-1)
   end
-  game.print(channel)
+  --game.print(channel)
 
   textfield.text = channel
 
@@ -503,7 +511,6 @@ local on_post_entity_died = function(event)
   ghost.tags = tags
 
 end
-
 
 local on_player_setup_blueprint = function(event)
   local player = game.get_player(event.player_index)

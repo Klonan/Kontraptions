@@ -63,9 +63,10 @@ local transceiver =
   minable = {mining_time = 0.5, result = "circuit-network-transceiver"},
   max_health = 500,
   corpse = "medium-remnants",
-  selection_priority = 0,
+  dying_explosion = "substation-explosion",
   collision_box = {{-0.8, -0.8}, {0.8, 0.8}},
   selection_box = {{-1, -1}, {1, 1}},
+  drawing_box = {{-1, -3.5}, {1, 1.5}},
   damaged_trigger_effect = hit_effects.entity(),
   fluid_box =
   {
@@ -195,6 +196,7 @@ local electric_source =
   selection_box = {{-1, -1.1}, {1, 0.9}},
   allow_copy_paste = false,
   selectable_in_game = false,
+  selection_priority = 0,
   energy_source =
   {
     type = "electric",
