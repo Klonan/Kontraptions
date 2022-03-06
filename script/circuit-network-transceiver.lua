@@ -26,11 +26,12 @@ local transceiver_created = function(event)
   local electric_source = entity.surface.create_entity
   {
     name = "circuit-network-transciever-electric-source",
-    position = entity.position,
+    position = {entity.position.x, entity.position.y + 0.1},
     force = entity.force
   }
   electric_source.destructible = false
   electric_source.minable = false
+  electric_source.active = false
 
   local transceiver_data =
   {
@@ -352,6 +353,7 @@ local set_transceiver_channel = function(unit_number, new_channel)
     connect_to_channel(unit_number, new_channel)
   end
   transceiver_data.channel = new_channel
+  transceiver_data.electric_source.active = new_channel ~= ""
   update_transceiver(unit_number)
 end
 
