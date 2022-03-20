@@ -1,11 +1,13 @@
+local util = require("util")
 local fire_util = require("__base__/prototypes/fire-util.lua")
 
 local tinderbox =
 {
   type = "capsule",
   name = "tinderbox",
-  icon = "__base__/graphics/icons/slowdown-capsule.png",
-  icon_size = 64, icon_mipmaps = 4,
+  localised_name = {"tinderbox"},
+  icon = "__Kontraptions__/data/tinderbox/tinderbox.png",
+  icon_size = 64,
   capsule_action =
   {
     type = "throw",
@@ -14,7 +16,7 @@ local tinderbox =
       type = "projectile",
       activation_type = "throw",
       ammo_category = "capsule",
-      cooldown = 100,
+      cooldown = 30,
       projectile_creation_distance = 0.6,
       range = 8,
       ammo_type =
@@ -25,15 +27,15 @@ local tinderbox =
         {
           {
             type = "direct",
-            repeat_count = 12,
+            repeat_count = 17,
             action_delivery =
             {
               type = "projectile",
               projectile = "tinderbox-fire-projectile",
-              starting_speed = 0.3,
-              starting_speed_deviation = 0.2,
-              max_range = 6,
-              range_deviation = 1,
+              starting_speed = 0.4,
+              starting_speed_deviation = 0.08,
+              max_range = 7,
+              range_deviation = 0.5,
               direction_deviation = 1,
             }
           },
@@ -46,7 +48,7 @@ local tinderbox =
               {
                 {
                   type = "play-sound",
-                  sound = sounds.throw_projectile
+                  sound = data.raw["utility-sounds"].default.axe_mining_ore
                 }
               }
             }
@@ -56,8 +58,8 @@ local tinderbox =
     }
   },
   subgroup = "capsule",
-  order = "c[slowdown-capsule]",
-  stack_size = 100
+  order = "aa[tinderbox]",
+  stack_size = 50
 }
 
 local tinderbox_projectile =
@@ -65,7 +67,7 @@ local tinderbox_projectile =
   type = "projectile",
   name = "tinderbox-fire-projectile",
   flags = {"not-on-map"},
-  acceleration = -0.001,
+  acceleration = 0,
   action =
   {
     {
@@ -84,61 +86,33 @@ local tinderbox_projectile =
           },
           {
             type = "create-entity",
-            entity_name = "tinderbox-fire"
+            entity_name = "tinderbox-fire",
+            probability = 0.5
           },
         }
       }
     }
   },
-  animation =
+  animation = util.draw_as_glow
   {
-    filename = "__base__/graphics/entity/slowdown-capsule/slowdown-capsule.png",
-    draw_as_glow = true,
-    frame_count = 16,
+    filename = "__base__/graphics/entity/flamethrower-fire-stream/flamethrower-explosion.png",
+    priority = "extra-high",
+    width = 64,
+    height = 64,
+    frame_count = 32,
     line_length = 8,
-    animation_speed = 0.250,
-    width = 32,
-    height = 30,
-    shift = util.by_pixel(1, 0),
-    priority = "high",
-    hr_version =
-    {
-      filename = "__base__/graphics/entity/slowdown-capsule/hr-slowdown-capsule.png",
-      draw_as_glow = true,
-      frame_count = 16,
-      line_length = 8,
-      animation_speed = 0.250,
-      width = 60,
-      height = 60,
-      shift = util.by_pixel(0.5, 0.5),
-      priority = "high",
-      scale = 0.5
-    }
+    scale = 0.25
   },
   shadow =
   {
-    filename = "__base__/graphics/entity/slowdown-capsule/slowdown-capsule-shadow.png",
-    frame_count = 16,
-    line_length = 8,
-    animation_speed = 0.250,
-    width = 32,
-    height = 24,
-    shift = util.by_pixel(2, 13),
+    filename = "__base__/graphics/entity/acid-projectile/projectile-shadow.png",
+    line_length = 5,
+    width = 28,
+    height = 16,
+    frame_count = 33,
     priority = "high",
-    draw_as_shadow = true,
-    hr_version =
-    {
-      filename = "__base__/graphics/entity/slowdown-capsule/hr-slowdown-capsule-shadow.png",
-      frame_count = 16,
-      line_length = 8,
-      animation_speed = 0.250,
-      width = 64,
-      height = 48,
-      shift = util.by_pixel(2, 13.5),
-      priority = "high",
-      draw_as_shadow = true,
-      scale = 0.5
-    }
+    shift = {-0.09, 0.395},
+    scale = 0.25
   },
   --smoke = capsule_smoke
 }
@@ -165,10 +139,10 @@ local tinderbox_fire = fire_util.add_basic_fire_graphics_and_effects_definitions
   type = "fire",
   name = "tinderbox-fire",
   flags = {"placeable-off-grid", "not-on-map"},
-  damage_per_tick = {amount = 2 / 60, type = "fire"},
-  maximum_damage_multiplier = 6,
-  damage_multiplier_increase_per_added_fuel = 1,
-  damage_multiplier_decrease_per_tick = 0.005,
+  damage_per_tick = {amount = 0.5 / 60, type = "fire"},
+  maximum_damage_multiplier = 1,
+  damage_multiplier_increase_per_added_fuel = 0,
+  damage_multiplier_decrease_per_tick = 0,
 
   spawn_entity = "fire-flame-on-tree",
 
@@ -183,6 +157,24 @@ local tinderbox_fire = fire_util.add_basic_fire_graphics_and_effects_definitions
   delay_between_initial_flames = 10,
   pictures = fire_util.create_fire_pictures({ blend_mode = "normal", animation_speed = 1, scale = 0.25}),
   smoke_source_pictures =  fire_util.create_fire_smoke_source_pictures(0.5, nil),
+  working_sound =
+  {
+    sound =
+    {
+      {
+        filename = "__base__/sound/fire-1.ogg",
+        volume = 0.4
+      },
+      {
+        filename = "__base__/sound/fire-2.ogg",
+        volume = 0.4
+      }
+    },
+    match_volume_to_activity = true,
+    max_sounds_per_type = 3,
+    fade_in_ticks = 10,
+    fade_out_ticks = 90
+  }
 }
 tinderbox_fire.burnt_patch_pictures = nil
 tinderbox_fire.smoke = nil
