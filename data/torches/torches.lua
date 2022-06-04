@@ -70,7 +70,7 @@ data:extend{
     localised_name = {"torch"},
     icon = "__Kontraptions__/data/torches/torch-icon.png",
     icon_size = 64,
-    flags = {"placeable-player", "player-creation"},
+    flags = {"placeable-player", "player-creation", "not-rotatable"},
     fast_replaceable_group = "torches",
     max_health = 25,
     collision_box = {{-0.2, -0.2}, {0.2, 0.2}},

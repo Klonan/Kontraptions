@@ -1,0 +1,13 @@
+---------------------------------------------------------------------------------------------------
+Version: 1.0.0
+Date: 2022-06-04
+  Changes:
+    - Added Circuit network transceiver
+    - Added Daylight sensor
+    - Added Motion sensors (Enemy and friendly variants)
+    - Added Pollution sensor
+    - Added Pressure plate
+    - Added Remote explosives (TNT)
+    - Added Sign posts
+    - Merged Torches mod into this mod
+    - Added Tinderbox item
