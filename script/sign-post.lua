@@ -59,6 +59,7 @@ local sign_post_opened = function(entity, player)
     style = "entity_frame"
   }
   inner.style.height = determine_height(player)
+
   local textbox = inner.add
   {
     type = "text-box",
@@ -75,6 +76,18 @@ local sign_post_opened = function(entity, player)
   textbox.style.minimal_width = 0
   textbox.style.width = 0
   textbox.word_wrap = true
+
+  local h_flow = inner.add{type = "flow", direction = "horizontal", style = "player_input_horizontal_flow"}
+  h_flow.add{type = "label", caption = {"sign-post-icon"}}
+  local icon_picker = h_flow.add
+  {
+    type = "choose-elem-button",
+    elem_type = "signal",
+    signal = sign_post_data.icon,
+    enabled = player.admin,
+    tags = {sign_post_action = "change_icon", sign_post_unit_number = entity.unit_number},
+    style = "slot_button_in_shallow_frame"
+  }
 
   inner.add
   {
@@ -112,6 +125,109 @@ local update_admins_only = function(player, unit_number, new_state)
   local sign_post_data = script_data.sign_posts[unit_number]
   if not sign_post_data then return end
   sign_post_data.admins_only = new_state
+end
+
+local signal_id_to_sprite = function(signal_id)
+  local type = signal_id.type or ""
+  local name = signal_id.name or ""
+  local sprite_path
+  if type == "virtual" then
+    sprite_path = "virtual-signal" .."."..name
+  else
+    sprite_path = type.."."..name
+  end
+
+  if not game.is_valid_sprite_path(sprite_path) then
+    return "utility/missing_icon"
+  end
+
+  return sprite_path
+
+end
+
+local update_icon = function(sign_post_data)
+  local renderings = sign_post_data.icon_renderings
+  if renderings then
+    for k, id in pairs(renderings) do
+      rendering.destroy(id)
+    end
+    sign_post_data.icon_renderings = nil
+  end
+
+  local icon = sign_post_data.icon
+  if not icon then return end
+
+  local entity = sign_post_data.entity
+  if not entity or not entity.valid then return end
+
+  local surface = entity.surface
+
+  local new_renderings = {}
+
+  table.insert(new_renderings, rendering.draw_light
+  {
+    sprite = "utility.light_small",
+    --sprite = signal_id_to_sprite(icon),
+    scale = 0.5,
+    intensity = 0.8,
+    target = entity,
+    target_offset = {0, -0.5},
+    surface = surface,
+    forces = {entity.force},
+    only_in_alt_mode = true
+  })
+
+  table.insert(new_renderings, rendering.draw_sprite
+  {
+    sprite = "utility.light_small",
+    --sprite = signal_id_to_sprite(icon),
+    x_scale = 0.5,
+    y_scale = 0.5,
+    tint = {1, 0.5, 0},
+    target = entity,
+    target_offset = {0, -0.5},
+    surface = surface,
+    forces = {entity.force},
+    only_in_alt_mode = true
+  })
+
+  table.insert(new_renderings, rendering.draw_sprite
+  {
+    sprite = signal_id_to_sprite(icon),
+    x_scale = 1,
+    y_scale = 1,
+    tint = {0, 0, 0, 0.5},
+    target = entity,
+    target_offset = {0 + 1/16, -0.5 + 1/16},
+    surface = surface,
+    forces = {entity.force},
+    only_in_alt_mode = true
+  })
+
+  table.insert(new_renderings, rendering.draw_sprite
+  {
+    sprite = signal_id_to_sprite(icon),
+    x_scale = nil,
+    y_scale = nil,
+    tint = nil,
+    target = entity,
+    target_offset = {0, -0.5},
+    surface = surface,
+    forces = {entity.force},
+    only_in_alt_mode = true
+  })
+
+
+  sign_post_data.icon_renderings = new_renderings
+
+end
+
+local change_icon = function(player, unit_number, gui)
+  if not player.admin then return end
+  local sign_post_data = script_data.sign_posts[unit_number]
+  if not sign_post_data then return end
+  sign_post_data.icon = gui.elem_value
+  update_icon(sign_post_data)
 end
 
 local create_tooltip = function(sign_post_data)
@@ -234,6 +350,26 @@ local on_gui_text_changed = function(event)
 
 end
 
+local on_gui_elem_changed = function(event)
+  local gui = event.element
+  if not (gui and gui.valid) then return end
+
+  local player = game.get_player(event.player_index)
+  if not (player and player.valid) then return end
+
+  local tags = gui.tags
+  local action = tags.sign_post_action
+  if not action then return end
+
+  local unit_number = tags.sign_post_unit_number
+  if not unit_number then return end
+
+  if action == "change_icon" then
+    change_icon(player, unit_number, gui)
+  end
+
+end
+
 local clear_player_tooltip = function(player)
   local tooltip_data = script_data.player_tooltips[player.index]
   if not tooltip_data then return end
@@ -312,8 +448,11 @@ local on_entity_settings_pasted = function(event)
   destination_data.text = sign_post_data.text
   destination_data.admins_only = sign_post_data.admins_only
   destination_data.always_show_message = sign_post_data.always_show_message
+  destination_data.icon = sign_post_data.icon
+
   clear_tooltip(destination_data)
   update_tooltip(destination_data)
+  update_icon(destination_data)
 
 end
 
@@ -327,6 +466,7 @@ local save_to_blueprint_tags = function(unit_number)
     text = sign_post_data.text,
     admins_only = sign_post_data.admins_only,
     always_show_message = sign_post_data.always_show_message,
+    icon = sign_post_data.icon,
   }
 end
 
@@ -364,7 +504,9 @@ local restore_data_from_tags = function(entity, tags)
   sign_post_data.text = sign_post_tags.text
   sign_post_data.admins_only = sign_post_tags.admins_only
   sign_post_data.always_show_message = sign_post_tags.always_show_message
+  sign_post_data.icon = sign_post_tags.icon
   update_tooltip(sign_post_data)
+  update_icon(sign_post_data)
 
   --game.print("Loaded tags from blueprint")
 end
@@ -408,6 +550,7 @@ lib.events =
   [defines.events.on_gui_opened] = on_gui_opened,
   [defines.events.on_gui_text_changed] = on_gui_text_changed,
   [defines.events.on_gui_checked_state_changed] = on_gui_check_state_changed,
+  [defines.events.on_gui_elem_changed] = on_gui_elem_changed,
   [defines.events.on_selected_entity_changed] = on_selected_entity_changed,
   [defines.events.on_tick] = on_tick,
   [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
