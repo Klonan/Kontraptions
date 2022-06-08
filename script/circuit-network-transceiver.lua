@@ -572,7 +572,12 @@ local confirm_hotkey = function(event)
   local gui = player.opened
   if not (gui and gui.valid) then return end
 
-  local textfield = gui.children[2].children[1].children[1]
+  local a = gui.children[2]
+  if not a then return end
+  local b = a.children[1]
+  if not b then return end
+  local textfield = b.children[1]
+
   if not (textfield and textfield.valid) then return end
   confirm_transciever_channel_from_textfield(textfield)
 
