@@ -8,4 +8,4 @@ require("__Kontraptions__/data/torches/torches")
 require("__Kontraptions__/data/pressure-plate/pressure-plate")
 require("__Kontraptions__/data/circuit-network-transceiver/circuit-network-transceiver")
 require("__Kontraptions__/data/tinderbox/tinderbox")
-
+require("__Kontraptions__/data/long-range-delivery-drone/long-range-delivery-drone")
