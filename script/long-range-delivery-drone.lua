@@ -141,8 +141,43 @@ Depot.get_available_counts = function(self, item_name, item_count)
   return has_count, network_count
 end
 
+Depot.send_package = function(self)
+  local target = self.delivery_target
+  if not target then
+    error("No target?")
+  end
+  local target_inventory = target.entity.get_inventory(defines.inventory.chest)
+  local source_inventory = self.entity.get_inventory(defines.inventory.chest)
+  local scheduled = self.scheduled
+  for name, count in pairs(scheduled) do
+    local removed = source_inventory.remove({name = name, count = count})
+    if removed > 0 then
+      target_inventory.insert({name = name, count = removed})
+    end
+    scheduled[name] = nil
+    target.scheduled[name] = nil
+  end
+  self.entity.surface.create_entity
+  {
+    name = "electric-beam",
+    position = self.position,
+    source = self.entity,
+    target = target.entity,
+    duration = 60
+  }
+  self:clear_delivery_target()
+end
+
+Depot.clear_delivery_target = function(self)
+  self.delivery_target = nil
+  self:update_logistic_filters()
+end
+
 Depot.update = function(self)
   self:say("Hello")
+  if not self.delivery_target then
+    return
+  end
   local scheduled = self.scheduled
   local inventory = self.entity.get_inventory(defines.inventory.chest)
   local all_fulfilled = true
@@ -152,6 +187,9 @@ Depot.update = function(self)
       all_fulfilled = false
       break
     end
+  end
+  if all_fulfilled then
+    self:send_package()
   end
   --self:say("All fulfilled! Send it!")
 
@@ -259,6 +297,7 @@ Request_depot.update = function(self)
   end
 
   local scheduled = self.scheduled
+  self:say(serpent.block(scheduled))
   for slot_index = 1, entity.request_slot_count do
     local request = entity.get_request_slot(slot_index)
     if request then
