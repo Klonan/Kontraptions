@@ -1,6 +1,7 @@
 local DEPOT_UPDATE_INTERVAL = 30
 local DRONE_MAX_UPDATE_INTERVAL = 300
 local DRONE_SPEED = 0.5
+local DRONE_NAME = "long-range-delivery-drone"
 local MAX_DELIVERY_STACKS = 5
 local MIN_DELIVERY_STACKS = 1
 local script_data =
@@ -14,6 +15,8 @@ local script_data =
 local ceil = math.ceil
 local floor = math.floor
 local min = math.min
+local atan2 = math.atan2
+local tau = 2 * math.pi
 
 local distance_squared = function(a, b)
   local dx = a.x - b.x
@@ -73,7 +76,8 @@ Drone.new = function(entity)
   {
     entity = entity,
     unit_number = entity.unit_number,
-    scheduled = {}
+    scheduled = {},
+    inventory = entity.get_inventory(defines.inventory.car_trunk),
   }
   script.register_on_entity_destroyed(entity)
   Drone.load(self)
@@ -89,8 +93,6 @@ Drone.load = function(self)
   setmetatable(self, Drone.metatable)
 end
 
-local atan2 = math.atan2
-local tau = 2 * math.pi
 Drone.get_orientation_to_position = function(self, position)
   local origin = self.entity.position
   local dx = position.x - origin.x
@@ -132,12 +134,12 @@ local add_to_drone_update_schedule = function(drone, tick)
 end
 
 Drone.deliver_to_target = function(self)
-  self:say("DONE")
+  --self:say("DONE")
   self.entity.speed = 0
   local target = self.delivery_target
-  local source_inventory = self.entity.get_inventory(defines.inventory.car_trunk)
+  local source_inventory = self.inventory
   local source_scheduled = self.scheduled
-  local target_inventory = target.entity.get_inventory(defines.inventory.chest)
+  local target_inventory = target.inventory
   local target_scheduled = target.scheduled
   for name, count in pairs(source_scheduled) do
     local removed = source_inventory.remove({name = name, count = count})
@@ -153,7 +155,7 @@ Drone.deliver_to_target = function(self)
     end
   end
   script_data.drones[self.unit_number] = nil
-  self.entity.die()
+  self.entity.destroy()
 end
 
 Drone.update = function(self)
@@ -161,7 +163,7 @@ Drone.update = function(self)
   if not target then
     error("NO target?")
   end
-  self:say("HI")
+  --self:say("HI")
 
   if self:get_distance(target.position) < 0.5 then
     self:deliver_to_target()
@@ -181,7 +183,8 @@ Depot.new = function(entity)
     entity = entity,
     unit_number = entity.unit_number,
     position = entity.position,
-    scheduled = {}
+    scheduled = {},
+    inventory = entity.get_inventory(defines.inventory.chest)
   }
   script.register_on_entity_destroyed(entity)
   Depot.load(self)
@@ -209,10 +212,16 @@ end
 
 Depot.update_logistic_filters = function(self)
   local slot_index = 1
-  for name, count in pairs(self.scheduled) do
-    self.entity.set_request_slot({name = name, count = count}, slot_index)
+
+  if next(self.scheduled) then
+    self.entity.set_request_slot({name = DRONE_NAME, count = 1}, slot_index)
     slot_index = slot_index + 1
+    for name, count in pairs(self.scheduled) do
+      self.entity.set_request_slot({name = name, count = count}, slot_index)
+      slot_index = slot_index + 1
+    end
   end
+
   for i = slot_index, self.entity.request_slot_count do
     self.entity.clear_request_slot(i)
   end
@@ -235,28 +244,39 @@ Depot.delivery_requested = function(self, request_depot, item_name, item_count)
   return item_count
 end
 
+
 Depot.can_handle_request = function(self, request_depot)
   if self.delivery_target and self.delivery_target ~= request_depot then
     return false
   end
-  return true
+
+  local inventory_count = self:get_inventory_count(DRONE_NAME)
+  if inventory_count > 0 then
+    return true
+  end
+
+  local network_count = self:get_network_count(DRONE_NAME)
+  if network_count > 0 then
+    return true
+  end
+
+  return false
 end
 
-Depot.get_available_counts = function(self, item_name, item_count)
-  local has_count = self.entity.get_inventory(defines.inventory.chest).get_item_count(item_name) - (self.scheduled[item_name] or 0)
+Depot.get_inventory_count = function(self, item_name)
+  return self.inventory.get_item_count(item_name) - (self.scheduled[item_name] or 0)
+end
+
+Depot.get_network_count = function(self, item_name)
   local network = self.entity.logistic_network
-  local network_count = 0
-  if network then
-    network_count = network.get_item_count(item_name)
-  end
-  return has_count, network_count
+  return (network and network.get_item_count(item_name)) or 0
 end
 
 Depot.transfer_package = function(self, drone)
 
-  local source_inventory = self.entity.get_inventory(defines.inventory.chest)
+  local source_inventory = self.inventory
   local source_scheduled = self.scheduled
-  local drone_inventory = drone.entity.get_inventory(defines.inventory.car_trunk)
+  local drone_inventory = drone.inventory
   local drone_scheduled = drone.scheduled
   for name, count in pairs(source_scheduled) do
     local removed = source_inventory.remove({name = name, count = count})
@@ -277,9 +297,14 @@ Depot.send_drone = function(self)
     error("No target?")
   end
 
+  local removed = self.inventory.remove({name = DRONE_NAME, count = 1})
+  if removed == 0 then
+    return
+  end
+
   local entity = self.entity.surface.create_entity
   {
-    name = "long-range-delivery-drone",
+    name = DRONE_NAME,
     position = self.position,
     force = self.entity.force
   }
@@ -295,12 +320,12 @@ Depot.send_drone = function(self)
 end
 
 Depot.update = function(self)
-  self:say("Hello")
+  --self:say("Hello")
   if not self.delivery_target then
     return
   end
   local scheduled = self.scheduled
-  local inventory = self.entity.get_inventory(defines.inventory.chest)
+  local inventory = self.inventory
   local all_fulfilled = true
   for name, count in pairs(self.scheduled) do
     local has_count = inventory.get_item_count(name)
@@ -325,7 +350,8 @@ Request_depot.new = function(entity)
     entity = entity,
     unit_number = entity.unit_number,
     position = entity.position,
-    scheduled = {}
+    scheduled = {},
+    inventory = entity.get_inventory(defines.inventory.chest)
   }
   script.register_on_entity_destroyed(entity)
   Request_depot.load(self)
@@ -361,7 +387,7 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
   if not depots then return end
 
 
-  self:say("Trying to schedule: " .. item_name .. " " .. item_count)
+  --self:say("Trying to schedule: " .. item_name .. " " .. item_count)
 
   local stack_size = get_stack_size(item_name)
 
@@ -374,16 +400,18 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
   for k, depot in pairs (depots) do
     if depot:can_handle_request(self) then
       local capacity = depot:get_available_capacity(item_name)
-      depot:say("              "..capacity)
+      --depot:say("              "..capacity)
       if capacity >= stack_size * MIN_DELIVERY_STACKS then
-        local has_count, network_count = depot:get_available_counts(item_name, request_count)
-        if has_count >= request_count then
+        local inventory_count = depot:get_inventory_count(item_name)
+        if inventory_count >= request_count then
           table_insert(depots_with_item, depot)
-        end
-        if network_count >= request_count then
-          table_insert(depots_that_can_request_item, depot)
-        elseif network_count >= stack_size * MIN_DELIVERY_STACKS then
-          table_insert(depots_that_can_request_some_items, depot)
+        else
+          local network_count = depot:get_network_count(item_name)
+          if network_count >= request_count then
+            table_insert(depots_that_can_request_item, depot)
+          elseif network_count >= stack_size * MIN_DELIVERY_STACKS then
+            table_insert(depots_that_can_request_some_items, depot)
+          end
         end
       end
     end
@@ -406,19 +434,16 @@ Request_depot.update = function(self)
   if not entity.valid then
     return
   end
-  self:say("Hello")
+  --self:say("Hello")
   local point = entity.get_logistic_point()
   if not point then
     return
   end
 
-  local inventory = entity.get_inventory(defines.inventory.chest)
-  if not inventory then
-    return
-  end
 
+  local inventory = self.inventory
   local scheduled = self.scheduled
-  self:say(serpent.block(scheduled))
+  --self:say(serpent.block(scheduled))
   for slot_index = 1, entity.request_slot_count do
     local request = entity.get_request_slot(slot_index)
     if request then

@@ -89,7 +89,7 @@ local depot_recipe =
 {
   type = "recipe",
   name = "long-range-delivery-drone-depot",
-  enabled = false,
+  enabled = true,
   ingredients =
   {
     {"steel-chest", 1},
@@ -191,7 +191,7 @@ local request_depot_recipe =
 {
   type = "recipe",
   name = "long-range-delivery-drone-request-depot",
-  enabled = false,
+  enabled = true,
   ingredients =
   {
     {"steel-chest", 1},
@@ -263,7 +263,7 @@ local delivery_drone =
       color = {r = 0.92, g = 0.77, b = 0.3}
     }
   },
-  render_layer = "object",
+  render_layer = "air-object",
   light_animation =
   {
     filename = "__base__/graphics/entity/car/car-light.png",
@@ -448,7 +448,31 @@ local delivery_drone =
   has_belt_immunity = true,
   allow_passengers = false,
   terrain_friction_modifier = 0
+}
 
+local delivery_drone_item =
+{
+  type = "item",
+  name = "long-range-delivery-drone",
+  icon = delivery_drone.icon,
+  icon_size = delivery_drone.icon_size,
+  flags = {},
+  stack_size = 1
+}
+
+local delivery_drone_recipe =
+{
+  type = "recipe",
+  name = "long-range-delivery-drone",
+  enabled = true,
+  ingredients =
+  {
+    {"electric-engine-unit", 1},
+    {"advanced-circuit", 1},
+    {"steel-plate", 1},
+    {"battery", 1}
+  },
+  result = "long-range-delivery-drone"
 }
 
 data:extend
@@ -459,5 +483,7 @@ data:extend
   request_depot,
   request_depot_item,
   request_depot_recipe,
-  delivery_drone
+  delivery_drone,
+  delivery_drone_item,
+  delivery_drone_recipe
 }
