@@ -158,10 +158,35 @@ Drone.deliver_to_target = function(self)
   self.entity.destroy()
 end
 
+Drone.cleanup = function(self)
+  if self.delivery_target then
+    local source_scheduled = self.scheduled
+    local target_scheduled = self.delivery_target.scheduled
+    for name, count in pairs(source_scheduled) do
+      source_scheduled[name] = nil
+      target_scheduled[name] = (target_scheduled[name] or count) - count
+      if target_scheduled[name] <= 0 then
+        target_scheduled[name] = nil
+      end
+    end
+  end
+end
+
 Drone.update = function(self)
+
+  if not self.entity.valid then
+    self:cleanup()
+    return true
+  end
+
   local target = self.delivery_target
   if not target then
     error("NO target?")
+  end
+  if not target.entity.valid then
+    script_data.drones[self.unit_number] = nil
+    self.entity.die()
+    return
   end
   --self:say("HI")
 
@@ -319,9 +344,37 @@ Depot.send_drone = function(self)
 
 end
 
+Depot.cleanup = function(self)
+
+  if self.delivery_target then
+    local source_scheduled = self.scheduled
+    local target_scheduled = self.delivery_target.scheduled
+    for name, count in pairs(source_scheduled) do
+      target_scheduled[name] = (target_scheduled[name] or count) - count
+      if target_scheduled[name] <= 0 then
+        target_scheduled[name] = nil
+      end
+      source_scheduled[name] = nil
+    end
+  end
+end
+
 Depot.update = function(self)
+  if not self.entity.valid then
+    self:cleanup()
+    return true
+  end
   --self:say("Hello")
   if not self.delivery_target then
+    return
+  end
+  if not self.delivery_target.entity.valid then
+    self.delivery_target = nil
+    local scheduled = self.scheduled
+    for name, count in pairs(scheduled) do
+      scheduled[name] = nil
+    end
+    self:update_logistic_filters()
     return
   end
   local scheduled = self.scheduled
@@ -499,7 +552,9 @@ local update_depots = function(tick)
   for force_name, force_depots in pairs(script_data.depots) do
     for surface_name, surface_depots in pairs(force_depots) do
       for unit_number, depot in pairs(surface_depots) do
-        depot:update()
+        if depot:update() then
+          surface_depots[unit_number] = nil
+        end
       end
     end
   end
@@ -507,7 +562,9 @@ local update_depots = function(tick)
   for force_name, force_depots in pairs(script_data.request_depots) do
     for surface_name, surface_depots in pairs(force_depots) do
       for unit_number, depot in pairs(surface_depots) do
-        depot:update()
+        if depot:update() then
+          surface_depots[unit_number] = nil
+        end
       end
     end
   end
@@ -521,7 +578,9 @@ local update_drones = function(tick)
   for unit_number, bool in pairs (drones_to_update) do
     local drone = drones[unit_number]
     if drone then
-      drone:update()
+      if drone:update() then
+        drones[unit_number] = nil
+      end
     end
   end
   script_data.drone_update_schedule[tick] = nil
