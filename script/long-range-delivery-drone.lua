@@ -1,10 +1,14 @@
-local UPDATE_INTERVAL = 30
+local DEPOT_UPDATE_INTERVAL = 30
+local DRONE_MAX_UPDATE_INTERVAL = 300
+local DRONE_SPEED = 0.5
 local MAX_DELIVERY_STACKS = 5
 local MIN_DELIVERY_STACKS = 1
 local script_data =
 {
   request_depots = {},
-  depots = {}
+  depots = {},
+  drones = {},
+  drone_update_schedule = {}
 }
 
 local ceil = math.ceil
@@ -60,6 +64,113 @@ local entity_say = function(entity, text, tint)
       color = tint
     }
   end
+end
+
+local Drone = {}
+Drone.metatable = {__index = Drone}
+Drone.new = function(entity)
+  local self =
+  {
+    entity = entity,
+    unit_number = entity.unit_number,
+    scheduled = {}
+  }
+  script.register_on_entity_destroyed(entity)
+  Drone.load(self)
+  script_data.drones[self.unit_number] = self
+  return self
+end
+
+Drone.say = function(self, text, tint)
+  entity_say(self.entity, text, tint)
+end
+
+Drone.load = function(self)
+  setmetatable(self, Drone.metatable)
+end
+
+local atan2 = math.atan2
+local tau = 2 * math.pi
+Drone.get_orientation_to_position = function(self, position)
+  local origin = self.entity.position
+  local dx = position.x - origin.x
+  local dy = position.y - origin.y
+  local orientation = (atan2(dy, dx) / tau) + 0.25
+  if orientation < 0 then
+    orientation = orientation + 1
+  elseif orientation > 1 then
+    orientation = orientation - 1
+  end
+  return orientation
+end
+
+Drone.get_distance = function(self, position)
+  local origin = self.entity.position
+  local dx = position.x - origin.x
+  local dy = position.y - origin.y
+  return (dx * dx + dy * dy) ^ 0.5
+end
+
+Drone.get_time_to_next_update = function(self)
+  local distance = self:get_distance(self.delivery_target.position)
+  local time = distance / DRONE_SPEED
+  local ticks = floor(time * 0.5)
+  if ticks < 1 then
+    return 1
+  end
+  return min(ticks, DRONE_MAX_UPDATE_INTERVAL)
+end
+
+local add_to_drone_update_schedule = function(drone, tick)
+  local scheduled = script_data.drone_update_schedule
+  local scheduled_drone = scheduled[tick]
+  if not scheduled_drone then
+    scheduled_drone = {}
+    scheduled[tick] = scheduled_drone
+  end
+  scheduled_drone[drone.unit_number] = true
+end
+
+Drone.deliver_to_target = function(self)
+  self:say("DONE")
+  self.entity.speed = 0
+  local target = self.delivery_target
+  local source_inventory = self.entity.get_inventory(defines.inventory.car_trunk)
+  local source_scheduled = self.scheduled
+  local target_inventory = target.entity.get_inventory(defines.inventory.chest)
+  local target_scheduled = target.scheduled
+  for name, count in pairs(source_scheduled) do
+    local removed = source_inventory.remove({name = name, count = count})
+    if removed > 0 then
+      target_inventory.insert({name = name, count = removed})
+    end
+    source_scheduled[name] = nil
+    if target_scheduled[name] then
+      target_scheduled[name] = target_scheduled[name] - count
+      if target_scheduled[name] <= 0 then
+        target_scheduled[name] = nil
+      end
+    end
+  end
+  script_data.drones[self.unit_number] = nil
+  self.entity.die()
+end
+
+Drone.update = function(self)
+  local target = self.delivery_target
+  if not target then
+    error("NO target?")
+  end
+  self:say("HI")
+
+  if self:get_distance(target.position) < 0.5 then
+    self:deliver_to_target()
+    return
+  end
+
+  self.entity.orientation = self:get_orientation_to_position(target.position)
+  self.entity.speed = DRONE_SPEED
+  add_to_drone_update_schedule(self, game.tick + self:get_time_to_next_update())
 end
 
 local Depot = {}
@@ -141,36 +252,46 @@ Depot.get_available_counts = function(self, item_name, item_count)
   return has_count, network_count
 end
 
-Depot.send_package = function(self)
+Depot.transfer_package = function(self, drone)
+
+  local source_inventory = self.entity.get_inventory(defines.inventory.chest)
+  local source_scheduled = self.scheduled
+  local drone_inventory = drone.entity.get_inventory(defines.inventory.car_trunk)
+  local drone_scheduled = drone.scheduled
+  for name, count in pairs(source_scheduled) do
+    local removed = source_inventory.remove({name = name, count = count})
+    if removed > 0 then
+      drone_inventory.insert({name = name, count = removed})
+    end
+    source_scheduled[name] = nil
+    drone_scheduled[name] = count
+  end
+  self:update_logistic_filters()
+
+end
+
+Depot.send_drone = function(self)
+
   local target = self.delivery_target
   if not target then
     error("No target?")
   end
-  local target_inventory = target.entity.get_inventory(defines.inventory.chest)
-  local source_inventory = self.entity.get_inventory(defines.inventory.chest)
-  local scheduled = self.scheduled
-  for name, count in pairs(scheduled) do
-    local removed = source_inventory.remove({name = name, count = count})
-    if removed > 0 then
-      target_inventory.insert({name = name, count = removed})
-    end
-    scheduled[name] = nil
-    target.scheduled[name] = nil
-  end
-  self.entity.surface.create_entity
-  {
-    name = "electric-beam",
-    position = self.position,
-    source = self.entity,
-    target = target.entity,
-    duration = 60
-  }
-  self:clear_delivery_target()
-end
 
-Depot.clear_delivery_target = function(self)
+  local entity = self.entity.surface.create_entity
+  {
+    name = "long-range-delivery-drone",
+    position = self.position,
+    force = self.entity.force
+  }
+
+  local drone = Drone.new(entity)
+  self:transfer_package(drone)
+
+  drone.delivery_target = target
   self.delivery_target = nil
-  self:update_logistic_filters()
+
+  drone:update()
+
 end
 
 Depot.update = function(self)
@@ -189,7 +310,7 @@ Depot.update = function(self)
     end
   end
   if all_fulfilled then
-    self:send_package()
+    self:send_drone()
   end
   --self:say("All fulfilled! Send it!")
 
@@ -347,8 +468,8 @@ local on_script_trigger_effect = function(event)
   end
 end
 
-local on_tick = function(event)
-  if event.tick % UPDATE_INTERVAL ~= 0 then return end
+local update_depots = function(tick)
+  if tick % DEPOT_UPDATE_INTERVAL ~= 0 then return end
 
   for force_name, force_depots in pairs(script_data.depots) do
     for surface_name, surface_depots in pairs(force_depots) do
@@ -365,6 +486,25 @@ local on_tick = function(event)
       end
     end
   end
+end
+
+local update_drones = function(tick)
+
+  local drones_to_update = script_data.drone_update_schedule[tick]
+  if not drones_to_update then return end
+  local drones = script_data.drones
+  for unit_number, bool in pairs (drones_to_update) do
+    local drone = drones[unit_number]
+    if drone then
+      drone:update()
+    end
+  end
+  script_data.drone_update_schedule[tick] = nil
+end
+
+local on_tick = function(event)
+  update_depots(event.tick)
+  update_drones(event.tick)
 end
 
 local lib = {}
@@ -396,6 +536,10 @@ lib.on_load = function()
         Request_depot.load(request_depot)
       end
     end
+  end
+
+  for unit_number, drone in pairs(script_data.drones) do
+    Drone.load(drone)
   end
 
 end

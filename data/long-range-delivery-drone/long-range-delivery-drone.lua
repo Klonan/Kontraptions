@@ -201,6 +201,256 @@ local request_depot_recipe =
   result = "long-range-delivery-drone-request-depot"
 }
 
+local delivery_drone =
+{
+  type = "car",
+  name = "long-range-delivery-drone",
+  icon = "__base__/graphics/icons/car.png",
+  icon_size = 64, icon_mipmaps = 4,
+  flags = {"placeable-neutral", "player-creation", "placeable-off-grid", "not-flammable"},
+  --minable = {mining_time = 0.4, result = "car"},
+  mined_sound = {filename = "__core__/sound/deconstruct-medium.ogg",volume = 0.8},
+  max_health = 500,
+  corpse = "car-remnants",
+  dying_explosion = "car-explosion",
+  alert_icon_shift = util.by_pixel(0, -13),
+  energy_per_hit_point = 1000000,
+  collision_box = {{0, 0}, {0, 0}},
+  collision_mask = {},
+  selection_box = {{-0.7, -1}, {0.7, 1}},
+  effectivity = 1,
+  braking_power = "200kW",
+  energy_source =
+  {
+    type = "void"
+  },
+  consumption = "150kW",
+  friction = 0.000000001,
+  light =
+  {
+    {
+      type = "oriented",
+      minimum_darkness = 0.3,
+      picture =
+      {
+        filename = "__core__/graphics/light-cone.png",
+        priority = "extra-high",
+        flags = { "light" },
+        scale = 2,
+        width = 200,
+        height = 200
+      },
+      shift = {-0.6, -14},
+      size = 2,
+      intensity = 0.6,
+      color = {r = 0.92, g = 0.77, b = 0.3}
+    },
+    {
+      type = "oriented",
+      minimum_darkness = 0.3,
+      picture =
+      {
+        filename = "__core__/graphics/light-cone.png",
+        priority = "extra-high",
+        flags = { "light" },
+        scale = 2,
+        width = 200,
+        height = 200
+      },
+      shift = {0.6, -14},
+      size = 2,
+      intensity = 0.6,
+      color = {r = 0.92, g = 0.77, b = 0.3}
+    }
+  },
+  render_layer = "object",
+  light_animation =
+  {
+    filename = "__base__/graphics/entity/car/car-light.png",
+    priority = "low",
+    blend_mode = "additive",
+    draw_as_glow = true,
+    width = 102,
+    height = 84,
+    line_length = 8,
+    direction_count = 64,
+    shift = util.by_pixel(0 + 2, -8 + 3),
+    repeat_count = 2
+  },
+  animation =
+  {
+    layers =
+    {
+      {
+        priority = "low",
+        width = 102,
+        height = 86,
+        frame_count = 2,
+        direction_count = 64,
+        shift = {0, -0.1875},
+        animation_speed = 8,
+        max_advance = 0.2,
+        stripes =
+        {
+          {
+            filename = "__base__/graphics/entity/car/car-1.png",
+            width_in_frames = 2,
+            height_in_frames = 22
+          },
+          {
+            filename = "__base__/graphics/entity/car/car-2.png",
+            width_in_frames = 2,
+            height_in_frames = 22
+          },
+          {
+            filename = "__base__/graphics/entity/car/car-3.png",
+            width_in_frames = 2,
+            height_in_frames = 20
+          }
+        }
+      },
+      {
+        priority = "low",
+        width = 100,
+        height = 75,
+        frame_count = 2,
+        apply_runtime_tint = true,
+        direction_count = 64,
+        max_advance = 0.2,
+        line_length = 2,
+        shift = {0, -0.171875},
+        stripes = util.multiplystripes(2,
+        {
+          {
+            filename = "__base__/graphics/entity/car/car-mask-1.png",
+            width_in_frames = 1,
+            height_in_frames = 22
+          },
+          {
+            filename = "__base__/graphics/entity/car/car-mask-2.png",
+            width_in_frames = 1,
+            height_in_frames = 22
+          },
+          {
+            filename = "__base__/graphics/entity/car/car-mask-3.png",
+            width_in_frames = 1,
+            height_in_frames = 20
+          }
+        })
+      },
+      {
+        priority = "low",
+        width = 114,
+        height = 76,
+        frame_count = 2,
+        draw_as_shadow = true,
+        direction_count = 64,
+        shift = {0.28125, 0.25},
+        max_advance = 0.2,
+        stripes = util.multiplystripes(2,
+        {
+          {
+            filename = "__base__/graphics/entity/car/car-shadow-1.png",
+            width_in_frames = 1,
+            height_in_frames = 22
+          },
+          {
+            filename = "__base__/graphics/entity/car/car-shadow-2.png",
+            width_in_frames = 1,
+            height_in_frames = 22
+          },
+          {
+            filename = "__base__/graphics/entity/car/car-shadow-3.png",
+            width_in_frames = 1,
+            height_in_frames = 20
+          }
+        })
+      }
+    }
+  },
+  turret_animation =
+  {
+    layers =
+    {
+      {
+        filename = "__base__/graphics/entity/car/car-turret.png",
+        priority = "low",
+        line_length = 8,
+        width = 36,
+        height = 29,
+        frame_count = 1,
+        direction_count = 64,
+        shift = {0.03125, -0.890625},
+        animation_speed = 8,
+      },
+      {
+        filename = "__base__/graphics/entity/car/car-turret-shadow.png",
+        priority = "low",
+        line_length = 8,
+        width = 46,
+        height = 31,
+        frame_count = 1,
+        draw_as_shadow = true,
+        direction_count = 64,
+        shift = {0.875, 0.359375}
+      }
+    }
+  },
+  turret_rotation_speed = 0.35 / 60,
+  sound_no_fuel =
+  {
+    {
+      filename = "__base__/sound/fight/car-no-fuel-1.ogg",
+      volume = 0.6
+    }
+  },
+  stop_trigger_speed = 0.15,
+  stop_trigger =
+  {
+    {
+      type = "play-sound",
+      sound =
+      {
+        {
+          filename = "__base__/sound/car-breaks.ogg",
+          volume = 0.2
+        }
+      }
+    }
+  },
+  sound_minimum_speed = 0.25,
+  sound_scaling_ratio = 0.8,
+  working_sound =
+  {
+    sound =
+    {
+      filename = "__base__/sound/car-engine.ogg",
+      volume = 0.67
+    },
+    activate_sound =
+    {
+      filename = "__base__/sound/car-engine-start.ogg",
+      volume = 0.67
+    },
+    deactivate_sound =
+    {
+      filename = "__base__/sound/car-engine-stop.ogg",
+      volume = 0.67
+    },
+    match_speed_to_activity = true
+  },
+  open_sound = { filename = "__base__/sound/car-door-open.ogg", volume=0.5 },
+  close_sound = { filename = "__base__/sound/car-door-close.ogg", volume = 0.4 },
+  rotation_speed = 0.015,
+  weight = 100,
+  guns = {},
+  inventory_size = 5,
+  has_belt_immunity = true,
+  allow_passengers = false,
+  terrain_friction_modifier = 0
+
+}
+
 data:extend
 {
   depot,
@@ -208,5 +458,6 @@ data:extend
   depot_recipe,
   request_depot,
   request_depot_item,
-  request_depot_recipe
+  request_depot_recipe,
+  delivery_drone
 }
