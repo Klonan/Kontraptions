@@ -250,7 +250,7 @@ Drone.update = function(self)
     self.entity.die()
     return
   end
-  self:say("HI")
+  --self:say("HI")
 
   if self:get_distance_to_target() < 0.5 then
     self:deliver_to_target()
@@ -304,11 +304,13 @@ Depot.update_logistic_filters = function(self)
   local slot_index = 1
 
   if next(self.scheduled) then
-    self.entity.set_request_slot({name = DRONE_NAME, count = 1}, slot_index)
+    self.entity.set_request_slot({name = DRONE_NAME, count = 1 + (self.scheduled[DRONE_NAME] or 0)}, slot_index)
     slot_index = slot_index + 1
     for name, count in pairs(self.scheduled) do
-      self.entity.set_request_slot({name = name, count = count}, slot_index)
-      slot_index = slot_index + 1
+      if name ~= DRONE_NAME then
+        self.entity.set_request_slot({name = name, count = count}, slot_index)
+        slot_index = slot_index + 1
+      end
     end
   end
 
@@ -447,6 +449,7 @@ Depot.update = function(self)
   local all_fulfilled = true
   for name, count in pairs(self.scheduled) do
     local has_count = inventory.get_item_count(name)
+    if name == DRONE_NAME then has_count = has_count - 1 end
     if has_count < count then
       all_fulfilled = false
       break
