@@ -2,6 +2,7 @@ local depot =
 {
   type = "logistic-container",
   name = "long-range-delivery-drone-depot",
+  localised_name = {"long-range-delivery-drone-depot"},
   icon = "__base__/graphics/icons/logistic-chest-requester.png",
   icon_size = 64, icon_mipmaps = 4,
   flags = {"placeable-player", "player-creation"},
@@ -23,7 +24,7 @@ local depot =
     }
   },
   fast_replaceable_group = "container",
-  inventory_size = 20,
+  inventory_size = 80,
   logistic_mode = "requester",
   open_sound = { filename = "__base__/sound/metallic-chest-open.ogg", volume=0.43 },
   close_sound = { filename = "__base__/sound/metallic-chest-close.ogg", volume = 0.43 },
@@ -42,7 +43,6 @@ local depot =
         scale = 1
       },
       {
-
         filename = "__base__/graphics/entity/logistic-chest/hr-logistic-chest-shadow.png",
         priority = "extra-high",
         width = 112,
@@ -56,7 +56,7 @@ local depot =
   },
   circuit_wire_connection_point = circuit_connector_definitions["chest"].points,
   circuit_connector_sprites = circuit_connector_definitions["chest"].sprites,
-  circuit_wire_max_distance = 0,
+  circuit_wire_max_distance = 10,
   created_effect =
   {
     type = "direct",
@@ -103,6 +103,7 @@ local request_depot =
 {
   type = "logistic-container",
   name = "long-range-delivery-drone-request-depot",
+  localised_name = {"long-range-delivery-drone-request-depot"},
   icon = "__base__/graphics/icons/logistic-chest-requester.png",
   icon_size = 64, icon_mipmaps = 4,
   flags = {"placeable-player", "player-creation"},
@@ -124,7 +125,7 @@ local request_depot =
     }
   },
   fast_replaceable_group = "container",
-  inventory_size = 20,
+  inventory_size = 80,
   logistic_mode = "requester",
   open_sound = { filename = "__base__/sound/metallic-chest-open.ogg", volume=0.43 },
   close_sound = { filename = "__base__/sound/metallic-chest-close.ogg", volume = 0.43 },
@@ -158,7 +159,7 @@ local request_depot =
   },
   circuit_wire_connection_point = circuit_connector_definitions["chest"].points,
   circuit_connector_sprites = circuit_connector_definitions["chest"].sprites,
-  circuit_wire_max_distance = 0,
+  circuit_wire_max_distance = 10,
   created_effect =
   {
     type = "direct",
@@ -205,6 +206,7 @@ local delivery_drone =
 {
   type = "car",
   name = "long-range-delivery-drone",
+  localised_name = {"long-range-delivery-drone"},
   icon = "__base__/graphics/icons/car.png",
   icon_size = 64, icon_mipmaps = 4,
   flags = {"placeable-neutral", "player-creation", "placeable-off-grid", "not-flammable"},
@@ -447,7 +449,14 @@ local delivery_drone =
   inventory_size = 5,
   has_belt_immunity = true,
   allow_passengers = false,
-  terrain_friction_modifier = 0
+  terrain_friction_modifier = 0,
+  minimap_representation =
+  {
+    filename = "__Kontraptions__/data/long-range-delivery-drone/long-range-delivery-drone-map.png",
+    flags = {"icon"},
+    size = {128, 128},
+    scale = 0.5
+  }
 }
 
 local delivery_drone_item =
