@@ -228,7 +228,7 @@ local delivery_drone =
   },
   consumption = "150kW",
   friction = 0.000000001,
-  light =
+  poop_light =
   {
     {
       type = "oriented",
@@ -266,7 +266,7 @@ local delivery_drone =
     }
   },
   render_layer = "air-object",
-  light_animation =
+  poop_light_animation =
   {
     filename = "__base__/graphics/entity/car/car-light.png",
     priority = "low",
@@ -279,7 +279,7 @@ local delivery_drone =
     shift = util.by_pixel(0 + 2, -8 + 3),
     repeat_count = 2
   },
-  animation =
+  poop_animation =
   {
     layers =
     {
@@ -370,7 +370,15 @@ local delivery_drone =
       }
     }
   },
-  turret_animation =
+  animation =
+  {
+    filename = "__Kontraptions__/data/long-range-delivery-drone/Dronetest0001.png",
+    size = 512,
+    scale = 0.5,
+    frame_count = 1,
+    direction_count = 1,
+  },
+  poop_turret_animation =
   {
     layers =
     {

@@ -1,8 +1,12 @@
 local DEPOT_UPDATE_INTERVAL = 30
 local DRONE_MAX_UPDATE_INTERVAL = 300
-local DRONE_SPEED = 0.5
+local DRONE_MIN_SPEED = 0.1
+local DRONE_ACCELERATION = 1 / (60 * 8)
+local DRONE_MAX_SPEED = 0.5
+local DRONE_TURN_SPEED = 1 / (60 * 10)
+local DELIVERY_OFFSET = {0, -10}
 local DRONE_NAME = "long-range-delivery-drone"
-local MAX_DELIVERY_STACKS = 5
+local MAX_DELIVERY_STACKS = 1
 local MIN_DELIVERY_STACKS = 1
 local script_data =
 {
@@ -15,6 +19,7 @@ local script_data =
 local ceil = math.ceil
 local floor = math.floor
 local min = math.min
+local max = math.max
 local atan2 = math.atan2
 local tau = 2 * math.pi
 
@@ -106,6 +111,15 @@ Drone.get_orientation_to_position = function(self, position)
   return orientation
 end
 
+Drone.get_delivery_position = function(self)
+  local position = self.delivery_target.position
+  return {x = position.x + DELIVERY_OFFSET[1], y = position.y + DELIVERY_OFFSET[2]}
+end
+
+Drone.get_distance_to_target = function(self)
+  return self:get_distance(self:get_delivery_position())
+end
+
 Drone.get_distance = function(self, position)
   local origin = self.entity.position
   local dx = position.x - origin.x
@@ -114,8 +128,11 @@ Drone.get_distance = function(self, position)
 end
 
 Drone.get_time_to_next_update = function(self)
-  local distance = self:get_distance(self.delivery_target.position)
-  local time = distance / DRONE_SPEED
+  if self.needs_fast_update then
+    return 1
+  end
+  local distance = self:get_distance_to_target()
+  local time = distance / self.entity.speed
   local ticks = floor(time * 0.5)
   if ticks < 1 then
     return 1
@@ -172,6 +189,51 @@ Drone.cleanup = function(self)
   end
 end
 
+Drone.update_orientation = function(self)
+
+  if self.entity.speed < DRONE_MAX_SPEED then
+    return
+  end
+
+  local needed_orientation = self:get_orientation_to_position(self:get_delivery_position())
+  local orientation = self.entity.orientation
+  local delta_orientation = needed_orientation - orientation
+
+  if delta_orientation < -0.5 then
+    delta_orientation = delta_orientation + 1
+  elseif delta_orientation > 0.5 then
+    delta_orientation = delta_orientation - 1
+  end
+
+  if delta_orientation > DRONE_TURN_SPEED then
+    self.entity.orientation = orientation + DRONE_TURN_SPEED
+    self.needs_fast_update = true
+  elseif delta_orientation < -DRONE_TURN_SPEED then
+    self.entity.orientation = orientation - DRONE_TURN_SPEED
+    self.needs_fast_update = true
+  else
+    self.entity.orientation = needed_orientation
+  end
+
+end
+
+Drone.update_speed = function(self)
+
+  local speed = self.entity.speed
+
+  if speed < DRONE_MIN_SPEED then
+    self.entity.speed = DRONE_MIN_SPEED + DRONE_ACCELERATION
+    self.needs_fast_update = true
+    return
+  end
+
+  if speed < DRONE_MAX_SPEED then
+    self.entity.speed = speed + DRONE_ACCELERATION
+    self.needs_fast_update = true
+  end
+
+end
+
 Drone.update = function(self)
 
   if not self.entity.valid then
@@ -188,16 +250,19 @@ Drone.update = function(self)
     self.entity.die()
     return
   end
-  --self:say("HI")
+  self:say("HI")
 
-  if self:get_distance(target.position) < 0.5 then
+  if self:get_distance_to_target() < 0.5 then
     self:deliver_to_target()
     return
   end
 
-  self.entity.orientation = self:get_orientation_to_position(target.position)
-  self.entity.speed = DRONE_SPEED
+  self.needs_fast_update = false
+  self:update_speed()
+  self:update_orientation()
+
   add_to_drone_update_schedule(self, game.tick + self:get_time_to_next_update())
+
 end
 
 local Depot = {}
