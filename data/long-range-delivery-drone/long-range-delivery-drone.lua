@@ -372,11 +372,28 @@ local delivery_drone =
   },
   animation =
   {
-    filename = "__Kontraptions__/data/long-range-delivery-drone/Dronetest0001.png",
-    size = 512,
-    scale = 0.5,
-    frame_count = 1,
-    direction_count = 1,
+    layers =
+    {
+      {
+        filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone.png",
+        size = 512,
+        scale = 0.5,
+        frame_count = 1,
+        direction_count = 64,
+        line_length = 8,
+      },
+      {
+        filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-shadow.png",
+        size = 512,
+        scale = 0.5,
+        frame_count = 1,
+        direction_count = 64,
+        line_length = 8,
+        draw_as_shadow = true,
+        shift = {5, 5}
+      },
+
+    }
   },
   poop_turret_animation =
   {

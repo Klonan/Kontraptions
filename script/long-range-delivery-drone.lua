@@ -1,9 +1,9 @@
-local DEPOT_UPDATE_INTERVAL = 30
+local DEPOT_UPDATE_INTERVAL = 300
 local DRONE_MAX_UPDATE_INTERVAL = 300
 local DRONE_MIN_SPEED = 0.1
 local DRONE_ACCELERATION = 1 / (60 * 8)
 local DRONE_MAX_SPEED = 0.5
-local DRONE_TURN_SPEED = 1 / (60 * 10)
+local DRONE_TURN_SPEED = 1 / (60 * 5)
 local DELIVERY_OFFSET = {0, -10}
 local DRONE_NAME = "long-range-delivery-drone"
 local MAX_DELIVERY_STACKS = 1
@@ -22,6 +22,7 @@ local min = math.min
 local max = math.max
 local atan2 = math.atan2
 local tau = 2 * math.pi
+local table_insert = table.insert
 
 local distance_squared = function(a, b)
   local dx = a.x - b.x
@@ -426,29 +427,13 @@ Depot.cleanup = function(self)
   end
 end
 
-Depot.update = function(self)
-  if not self.entity.valid then
-    self:cleanup()
-    return true
-  end
-  --self:say("Hello")
-  if not self.delivery_target then
-    return
-  end
-  if not self.delivery_target.entity.valid then
-    self.delivery_target = nil
-    local scheduled = self.scheduled
-    for name, count in pairs(scheduled) do
-      scheduled[name] = nil
-    end
-    self:update_logistic_filters()
-    return
-  end
+Depot.check_send_drone = function(self)
   local scheduled = self.scheduled
   local inventory = self.inventory
+  local get_item_count = inventory.get_item_count
   local all_fulfilled = true
   for name, count in pairs(self.scheduled) do
-    local has_count = inventory.get_item_count(name)
+    local has_count = get_item_count(name)
     if name == DRONE_NAME then has_count = has_count - 1 end
     if has_count < count then
       all_fulfilled = false
@@ -458,6 +443,31 @@ Depot.update = function(self)
   if all_fulfilled then
     self:send_drone()
   end
+end
+
+Depot.update = function(self)
+
+  if not self.delivery_target then
+    return
+  end
+
+  if not self.entity.valid then
+    self:cleanup()
+    return true
+  end
+
+  --self:say("Hello")
+  if not self.delivery_target.entity.valid then
+    self.delivery_target = nil
+    local scheduled = self.scheduled
+    for name, count in pairs(scheduled) do
+      scheduled[name] = nil
+    end
+    self:update_logistic_filters()
+    return
+  end
+
+  self:check_send_drone()
   --self:say("All fulfilled! Send it!")
 
 end
@@ -492,21 +502,24 @@ Request_depot.get_closest = function(self, depots)
   local closest_depot = nil
   local closest_distance = math.huge
   local position = self.position
-  for k, depot in pairs(depots) do
+  for unit_number, depot in pairs(depots) do
     local distance = distance_squared(position, depot.position)
     if distance < closest_distance then
       closest_depot = depot
       closest_distance = distance
     end
   end
+
+  if not closest_depot then return end
+
+  depots[closest_depot.unit_number] = nil
   return closest_depot
 end
 
-local table_insert = table.insert
 Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
+
   local depots = get_depots(self.entity.surface, self.entity.force, script_data.depots)
   if not depots then return end
-
 
   --self:say("Trying to schedule: " .. item_name .. " " .. item_count)
 
@@ -518,35 +531,43 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
   local depots_that_can_request_item = {}
   local depots_that_can_request_some_items = {}
 
-  for k, depot in pairs (depots) do
+  for unit_number, depot in pairs (depots) do
     if depot:can_handle_request(self) then
       local capacity = depot:get_available_capacity(item_name)
       --depot:say("              "..capacity)
       if capacity >= stack_size * MIN_DELIVERY_STACKS then
         local inventory_count = depot:get_inventory_count(item_name)
         if inventory_count >= request_count then
-          table_insert(depots_with_item, depot)
+          depots_with_item[unit_number] = depot
         else
           local network_count = depot:get_network_count(item_name)
           if network_count >= request_count then
-            table_insert(depots_that_can_request_item, depot)
+            depots_that_can_request_item[unit_number] = depot
           elseif network_count >= stack_size * MIN_DELIVERY_STACKS then
-            table_insert(depots_that_can_request_some_items, depot)
+            depots_that_can_request_some_items[unit_number] = depot
           end
         end
       end
     end
   end
 
-  local closest = self:get_closest(depots_with_item) or self:get_closest(depots_that_can_request_item) or self:get_closest(depots_that_can_request_some_items)
-  if not closest then
-    return
+  local scheduled = self.scheduled
+  while true do
+
+    local closest = self:get_closest(depots_with_item) or self:get_closest(depots_that_can_request_item) or self:get_closest(depots_that_can_request_some_items)
+    if not closest then
+      return
+    end
+
+    local scheduled_count = closest:delivery_requested(self, item_name, item_count)
+    if scheduled_count == 0 then return end
+
+    scheduled[item_name] = (scheduled[item_name] or 0) + scheduled_count
+    if item_count == scheduled_count then return end
+
+    item_count = item_count - scheduled_count
   end
 
-  local scheduled_count = closest:delivery_requested(self, item_name, item_count)
-
-  local scheduled = self.scheduled
-  scheduled[item_name] = (scheduled[item_name] or 0) + scheduled_count
 
 end
 
