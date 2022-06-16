@@ -6,12 +6,14 @@ local DRONE_MAX_SPEED = 0.5
 local DRONE_TURN_SPEED = 1 / (60 * 5)
 local DELIVERY_OFFSET = {0, -10}
 local DRONE_NAME = "long-range-delivery-drone"
-local MAX_DELIVERY_STACKS = 1
+local MAX_DELIVERY_STACKS = 5
 local MIN_DELIVERY_STACKS = 1
 local script_data =
 {
   request_depots = {},
   depots = {},
+  depot_map = {},
+  depot_update_buckets = {},
   drones = {},
   drone_update_schedule = {}
 }
@@ -41,6 +43,11 @@ local get_stack_size = function(item_name)
 end
 
 local add_to_depots = function(self, list)
+  list[self.unit_number] = self
+end
+
+local add_to_map = function(self, list)
+
   local force_name = self.entity.force.name
   local force_depots = list[force_name]
   if not force_depots then
@@ -54,11 +61,20 @@ local add_to_depots = function(self, list)
     surface_depots = {}
     force_depots[surface_name] = surface_depots
   end
-
   surface_depots[self.unit_number] = self
 end
 
-get_depots = function(surface, force, list)
+local add_to_update_schedule = function(self)
+  local bucket_index = self.unit_number % DEPOT_UPDATE_INTERVAL
+  local bucket = script_data.depot_update_buckets[bucket_index]
+  if not bucket then
+    bucket = {}
+    script_data.depot_update_buckets[bucket_index] = bucket
+  end
+  bucket[self.unit_number] = self
+end
+
+get_depots_on_map = function(surface, force, list)
   local force_depots = list[force.name]
   return force_depots and force_depots[surface.name]
 end
@@ -280,6 +296,8 @@ Depot.new = function(entity)
   script.register_on_entity_destroyed(entity)
   Depot.load(self)
   add_to_depots(self, script_data.depots)
+  add_to_map(self, script_data.depot_map)
+  add_to_update_schedule(self)
   return self
 end
 
@@ -487,6 +505,7 @@ Request_depot.new = function(entity)
   script.register_on_entity_destroyed(entity)
   Request_depot.load(self)
   add_to_depots(self, script_data.request_depots)
+  add_to_update_schedule(self)
   return self
 end
 
@@ -518,7 +537,7 @@ end
 
 Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
 
-  local depots = get_depots(self.entity.surface, self.entity.force, script_data.depots)
+  local depots = get_depots_on_map(self.entity.surface, self.entity.force, script_data.depot_map)
   if not depots then return end
 
   --self:say("Trying to schedule: " .. item_name .. " " .. item_count)
@@ -532,7 +551,9 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
   local depots_that_can_request_some_items = {}
 
   for unit_number, depot in pairs (depots) do
-    if depot:can_handle_request(self) then
+    if not depot.entity.valid then
+      depots[unit_number] = nil
+    elseif depot:can_handle_request(self) then
       local capacity = depot:get_available_capacity(item_name)
       --depot:say("              "..capacity)
       if capacity >= stack_size * MIN_DELIVERY_STACKS then
@@ -574,7 +595,7 @@ end
 Request_depot.update = function(self)
   local entity = self.entity
   if not entity.valid then
-    return
+    return true
   end
   --self:say("Hello")
   local point = entity.get_logistic_point()
@@ -593,7 +614,7 @@ Request_depot.update = function(self)
       local scheduled_count = scheduled[name] or 0
       local container_count = inventory.get_item_count(name)
       local needed = request.count - (container_count + scheduled_count)
-      if needed > 0 then
+      if needed >= (get_stack_size(name) * MIN_DELIVERY_STACKS) then
         self:try_to_schedule_delivery(name, needed)
       end
     end
@@ -636,27 +657,19 @@ local on_script_trigger_effect = function(event)
 end
 
 local update_depots = function(tick)
-  if tick % DEPOT_UPDATE_INTERVAL ~= 0 then return end
+  local bucket_index = tick % DEPOT_UPDATE_INTERVAL
+  local bucket = script_data.depot_update_buckets[bucket_index]
+  if not bucket then return end
 
-  for force_name, force_depots in pairs(script_data.depots) do
-    for surface_name, surface_depots in pairs(force_depots) do
-      for unit_number, depot in pairs(surface_depots) do
-        if depot:update() then
-          surface_depots[unit_number] = nil
-        end
+  for unit_number, depot in pairs(bucket) do
+    if depot:update() then
+      bucket[unit_number] = nil
+      if not next(bucket) then
+        script_data.depots[bucket_index] = nil
       end
     end
   end
 
-  for force_name, force_depots in pairs(script_data.request_depots) do
-    for surface_name, surface_depots in pairs(force_depots) do
-      for unit_number, depot in pairs(surface_depots) do
-        if depot:update() then
-          surface_depots[unit_number] = nil
-        end
-      end
-    end
-  end
 end
 
 local update_drones = function(tick)
@@ -695,20 +708,12 @@ end
 lib.on_load = function()
   script_data = global.long_range_delivery_drone or script_data
 
-  for force_name, force_depots in pairs(script_data.depots) do
-    for surface_name, surface_depots in pairs(force_depots) do
-      for unit_number, depot in pairs(surface_depots) do
-        Depot.load(depot)
-      end
-    end
+  for unit_number, depot in pairs(script_data.depots) do
+    Depot.load(depot)
   end
 
-  for force_name, force_depots in pairs(script_data.request_depots) do
-    for surface_name, surface_depots in pairs(force_depots) do
-      for unit_number, request_depot in pairs(surface_depots) do
-        Request_depot.load(request_depot)
-      end
-    end
+  for unit_number, request_depot in pairs(script_data.request_depots) do
+    Request_depot.load(request_depot)
   end
 
   for unit_number, drone in pairs(script_data.drones) do

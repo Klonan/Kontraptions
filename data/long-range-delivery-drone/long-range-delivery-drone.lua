@@ -12,6 +12,7 @@ local depot =
   dying_explosion = "requester-chest-explosion",
   collision_box = {{-0.85, -0.85}, {0.85, 0.85}},
   selection_box = {{-1, -1}, {1, 1}},
+  render_not_in_network_icon = false,
   resistances =
   {
     {
@@ -113,6 +114,7 @@ local request_depot =
   dying_explosion = "requester-chest-explosion",
   collision_box = {{-0.85, -0.85}, {0.85, 0.85}},
   selection_box = {{-1, -1}, {1, 1}},
+  render_not_in_network_icon = false,
   resistances =
   {
     {
@@ -126,7 +128,7 @@ local request_depot =
   },
   fast_replaceable_group = "container",
   inventory_size = 80,
-  logistic_mode = "requester",
+  logistic_mode = "buffer",
   open_sound = { filename = "__base__/sound/metallic-chest-open.ogg", volume=0.43 },
   close_sound = { filename = "__base__/sound/metallic-chest-close.ogg", volume = 0.43 },
   opened_duration = 10,
