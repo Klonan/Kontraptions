@@ -209,18 +209,18 @@ local delivery_drone =
   type = "car",
   name = "long-range-delivery-drone",
   localised_name = {"long-range-delivery-drone"},
-  icon = "__base__/graphics/icons/car.png",
-  icon_size = 64, icon_mipmaps = 4,
+  icon = "__Kontraptions__/data/long-range-delivery-drone/drone-item-icon.png",
+  icon_size = 64,
   flags = {"placeable-neutral", "player-creation", "placeable-off-grid", "not-flammable"},
   --minable = {mining_time = 0.4, result = "car"},
-  mined_sound = {filename = "__core__/sound/deconstruct-medium.ogg",volume = 0.8},
+  mined_sound = {filename = "__core__/sound/deconstruct-medium.ogg", volume = 0.8},
   max_health = 500,
   corpse = "car-remnants",
   dying_explosion = "car-explosion",
   alert_icon_shift = util.by_pixel(0, -13),
   energy_per_hit_point = 1000000,
   collision_box = {{0, 0}, {0, 0}},
-  collision_mask = {},
+  collision_mask = {"colliding-with-tiles-only"},
   selection_box = {{-0.7, -1}, {0.7, 1}},
   effectivity = 1,
   braking_power = "200kW",
@@ -377,24 +377,66 @@ local delivery_drone =
     layers =
     {
       {
-        filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone.png",
         size = 512,
-        scale = 0.5,
-        frame_count = 1,
+        frame_count = 4,
         direction_count = 64,
-        line_length = 8,
+        animation_speed = 1,
+        scale = 0.5,
+        stripes =
+        {
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-a.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          },
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-b.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          },
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-c.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          },
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-d.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          }
+        }
       },
       {
-        filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-shadow.png",
         size = 512,
-        scale = 0.5,
-        frame_count = 1,
+        frame_count = 4,
         direction_count = 64,
-        line_length = 8,
-        draw_as_shadow = true,
-        shift = {5, 5}
-      },
-
+        animation_speed = 1,
+        scale = 0.5,
+        apply_runtime_tint = true,
+        stripes =
+        {
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-msk-a.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          },
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-msk-b.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          },
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-msk-c.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          },
+          {
+            filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-msk-d.png",
+            width_in_frames = 8,
+            height_in_frames = 8
+          }
+        }
+      }
     }
   },
   poop_turret_animation =
@@ -490,10 +532,12 @@ local delivery_drone_item =
 {
   type = "item",
   name = "long-range-delivery-drone",
+  localised_name = delivery_drone.localised_name,
   icon = delivery_drone.icon,
   icon_size = delivery_drone.icon_size,
   flags = {},
-  stack_size = 1
+  stack_size = 1,
+  subgroup = "transport"
 }
 
 local delivery_drone_recipe =
@@ -511,6 +555,221 @@ local delivery_drone_recipe =
   result = "long-range-delivery-drone"
 }
 
+local drone_shadow_animation =
+{
+  type = "animation",
+  name = "long-range-delivery-drone-shadow-animation",
+  size = 512,
+  frame_count = 4,
+  direction_count = 64,
+  animation_speed = 1,
+  scale = 0.5,
+  draw_as_shadow = true,
+  --shift = {5, 5},
+  stripes =
+  {
+    {
+      filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-a.png",
+      width_in_frames = 8,
+      height_in_frames = 8
+    },
+    {
+      filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-b.png",
+      width_in_frames = 8,
+      height_in_frames = 8
+    },
+    {
+      filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-c.png",
+      width_in_frames = 8,
+      height_in_frames = 8
+    },
+    {
+      filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-d.png",
+      width_in_frames = 8,
+      height_in_frames = 8
+    }
+  }
+
+}
+
+local animation =
+{
+  layers =
+  {
+    {
+      size = 512,
+      frame_count = 255,
+      direction_count = 1,
+      animation_speed = 4,
+      scale = 0.5,
+      stripes =
+      {
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-a.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        },
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-b.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        },
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-c.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        },
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-d.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        }
+      }
+    },
+  }
+}
+
+local shadow_animation =
+{
+  layers =
+  {
+    {
+      size = 512,
+      frame_count = 255,
+      direction_count = 1,
+      animation_speed = 4,
+      scale = 0.5,
+      draw_as_shadow = true,
+      stripes =
+      {
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-a.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        },
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-b.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        },
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-c.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        },
+        {
+          filename = "__Kontraptions__/data/long-range-delivery-drone/hr-drone-sh-d.png",
+          width_in_frames = 8,
+          height_in_frames = 8
+        }
+      }
+    }
+  }
+}
+
+local reversed = function(animation)
+  local animation = util.copy(animation)
+  local layers = animation.layers or {animation}
+
+  for k, layer in pairs (layers) do
+    layer.run_mode = "backward"
+  end
+
+  return animation
+end
+
+local drone_dying_particle =
+{
+  type = "optimized-particle",
+  name = "long-range-delivery-drone-dying-particle",
+  pictures = {animation, reversed(animation)},
+  shadows = {shadow_animation, reversed(shadow_animation)},
+  movement_modifier = 0.95,
+  movement_modifier_when_on_ground = 0.90,
+  life_time = 1000,
+  render_layer = "air-object",
+  render_layer_when_on_ground = "object",
+  regular_trigger_effect_frequency = 2,
+  regular_trigger_effect =
+  {
+    {
+      type = "create-trivial-smoke",
+      smoke_name = "smoke-fast",
+      starting_frame_deviation = 5,
+      probability = 0.5
+    },
+    {
+      type = "create-particle",
+      particle_name = "spark-particle",
+      tail_length = 10,
+      tail_length_deviation = 5,
+      tail_width = 5,
+      probability = 0.2,
+      initial_height = 0.2,
+      initial_vertical_speed = 0.15,
+      initial_vertical_speed_deviation = 0.05,
+      speed_from_center = 0.1,
+      speed_from_center_deviation = 0.05,
+      offset_deviation = {{-0.25, -0.25},{0.25, 0.25}}
+    }
+  },
+  ended_on_ground_trigger_effect =
+  {
+    {
+      type = "create-entity",
+      entity_name = "big-explosion"
+    }
+  },
+  ended_in_water_trigger_effect =
+  {
+    {
+      type = "create-entity",
+      entity_name = "big-explosion"
+    }
+  }
+}
+
+local delivery_particle =
+{
+  type = "optimized-particle",
+  name = "long-range-delivery-drone-delivery-particle",
+  movement_modifier = 1,
+  movement_modifier_when_on_ground = 0,
+  vertical_acceleration = 0,
+  life_time = 1000,
+  regular_trigger_effect_frequency = 9999,
+  pictures =
+  {
+    {
+      filename = "__base__/graphics/entity/poison-capsule/hr-poison-capsule.png",
+      draw_as_glow = true,
+      frame_count = 16,
+      line_length = 8,
+      animation_speed = 0.250,
+      width = 58,
+      height = 59,
+      shift = util.by_pixel(1, 0.5),
+      priority = "high",
+      scale = 0.5
+    }
+  },
+  shadows =
+  {
+    {
+      filename = "__base__/graphics/entity/poison-capsule/hr-poison-capsule-shadow.png",
+      frame_count = 16,
+      line_length = 8,
+      animation_speed = 0.250,
+      width = 54,
+      height = 42,
+      shift = util.by_pixel(1, 2),
+      priority = "high",
+      draw_as_shadow = true,
+      scale = 0.5
+    }
+  }
+}
+
 data:extend
 {
   depot,
@@ -521,5 +780,8 @@ data:extend
   request_depot_recipe,
   delivery_drone,
   delivery_drone_item,
-  delivery_drone_recipe
+  delivery_drone_recipe,
+  drone_dying_particle,
+  delivery_particle,
+  drone_shadow_animation
 }

@@ -1,10 +1,12 @@
-local DEPOT_UPDATE_INTERVAL = 300
+local DEPOT_UPDATE_INTERVAL = 101
 local DRONE_MAX_UPDATE_INTERVAL = 300
-local DRONE_MIN_SPEED = 0.1
+local DRONE_MIN_SPEED = 0.01
 local DRONE_ACCELERATION = 1 / (60 * 8)
 local DRONE_MAX_SPEED = 0.5
 local DRONE_TURN_SPEED = 1 / (60 * 5)
-local DELIVERY_OFFSET = {0, -10}
+local DRONE_HEIGHT = 8
+local DELIVERY_OFFSET = {0, -DRONE_HEIGHT}
+local DELIVERY_DISTANCE = 25
 local DRONE_NAME = "long-range-delivery-drone"
 local MAX_DELIVERY_STACKS = 5
 local MIN_DELIVERY_STACKS = 1
@@ -18,6 +20,7 @@ local script_data =
   drone_update_schedule = {}
 }
 
+
 local ceil = math.ceil
 local floor = math.floor
 local min = math.min
@@ -25,6 +28,9 @@ local max = math.max
 local atan2 = math.atan2
 local tau = 2 * math.pi
 local table_insert = table.insert
+local sin = math.sin
+local cos = math.cos
+local random = math.random
 
 local distance_squared = function(a, b)
   local dx = a.x - b.x
@@ -104,7 +110,34 @@ Drone.new = function(entity)
   script.register_on_entity_destroyed(entity)
   Drone.load(self)
   script_data.drones[self.unit_number] = self
+  self:create_shadow()
   return self
+end
+
+Drone.create_shadow = function(self)
+  self.shadow = rendering.draw_animation
+  {
+    animation = "long-range-delivery-drone-shadow-animation",
+    orientation = 0,
+    x_scale = 1,
+    y_scale = 1,
+    tint = nil,
+    render_layer = nil,
+    animation_speed = 1,
+    animation_offset = nil,
+    orientation_target = nil,
+    orientation_target_offset = nil,
+    oriented_offset = nil,
+    target = self.entity,
+    target_offset = {0, 0},
+    surface = self.entity.surface,
+    time_to_live = nil,
+    forces = nil,
+    players = nil,
+    visible = nil,
+  }
+  self:update_shadow_height()
+  self:update_shadow_orientation()
 end
 
 Drone.say = function(self, text, tint)
@@ -148,7 +181,7 @@ Drone.get_time_to_next_update = function(self)
   if self.needs_fast_update then
     return 1
   end
-  local distance = self:get_distance_to_target()
+  local distance = (self:get_distance_to_target() - DELIVERY_DISTANCE)
   local time = distance / self.entity.speed
   local ticks = floor(time * 0.5)
   if ticks < 1 then
@@ -157,19 +190,90 @@ Drone.get_time_to_next_update = function(self)
   return min(ticks, DRONE_MAX_UPDATE_INTERVAL)
 end
 
-local add_to_drone_update_schedule = function(drone, tick)
+Drone.add_to_drone_update_schedule = function(self, tick)
   local scheduled = script_data.drone_update_schedule
-  local scheduled_drone = scheduled[tick]
-  if not scheduled_drone then
-    scheduled_drone = {}
-    scheduled[tick] = scheduled_drone
+  local scheduled_drones = scheduled[tick]
+  if not scheduled_drones then
+    scheduled_drones = {}
+    scheduled[tick] = scheduled_drones
   end
-  scheduled_drone[drone.unit_number] = true
+  scheduled_drones[self.unit_number] = true
+  --self:say(tick - game.tick)
+end
+
+local get_rad = function(orientation)
+  local adjusted_orientation = orientation - 0.25
+  if adjusted_orientation < 0 then
+    adjusted_orientation = adjusted_orientation + 1
+  end
+  return adjusted_orientation * tau
+end
+
+Drone.get_movement = function(self, orientation_variation)
+  local orientation = self.entity.orientation + ((0.5 - math.random()) * (orientation_variation or 0))
+  local speed = self.entity.speed
+  local dx = speed * cos(get_rad(orientation))
+  local dy = speed * sin(get_rad(orientation))
+  return {dx, dy}
+end
+
+Drone.suicide = function(self)
+
+  local position = self.entity.position
+  local surface = self.entity.surface
+  surface.create_entity
+  {
+    name = "big-explosion",
+    position = position,
+    movement = self:get_movement(0.1),
+    --movement = {, 0},
+    height = DRONE_HEIGHT,
+    vertical_speed = 0.1,
+    frame_speed = 1
+  }
+  surface.create_particle
+  {
+    name = "long-range-delivery-drone-dying-particle",
+    position = {position.x, position.y + DRONE_HEIGHT},
+    movement = self:get_movement(0.1),
+    --movement = {, 0},
+    height = DRONE_HEIGHT,
+    vertical_speed = 0.1,
+    frame_speed = 1
+  }
+  script_data.drones[self.unit_number] = nil
+  self.entity.destroy()
+end
+
+Drone.schedule_suicide = function(self)
+  self.tick_to_suicide = game.tick + random(120, 300)
+  self.suicide_orientation = self.entity.orientation + ((0.5 - random()) * 2)
+  self:add_to_drone_update_schedule(game.tick + random(1, 30))
+end
+
+Drone.make_delivery_particle = function(self)
+  local distance = self:get_distance_to_target()
+  local position = self.entity.position
+  local speed = self.entity.speed
+  local time = distance / speed
+
+  local vertical_speed = -DRONE_HEIGHT / time
+
+
+  self.entity.surface.create_particle
+  {
+    name = "long-range-delivery-drone-delivery-particle",
+    position = {self.entity.position.x, self.entity.position.y + DRONE_HEIGHT},
+    movement = self:get_movement(),
+    height = DRONE_HEIGHT,
+    vertical_speed = vertical_speed,
+    frame_speed = 1
+  }
+
 end
 
 Drone.deliver_to_target = function(self)
-  --self:say("DONE")
-  self.entity.speed = 0
+  --self:say("Poopin time")
   local target = self.delivery_target
   local source_inventory = self.inventory
   local source_scheduled = self.scheduled
@@ -188,8 +292,8 @@ Drone.deliver_to_target = function(self)
       end
     end
   end
-  script_data.drones[self.unit_number] = nil
-  self.entity.destroy()
+  self:make_delivery_particle()
+  self:schedule_suicide()
 end
 
 Drone.cleanup = function(self)
@@ -206,15 +310,14 @@ Drone.cleanup = function(self)
   end
 end
 
-Drone.update_orientation = function(self)
+Drone.update_orientation = function(self, target_orientation)
 
   if self.entity.speed < DRONE_MAX_SPEED then
     return
   end
 
-  local needed_orientation = self:get_orientation_to_position(self:get_delivery_position())
   local orientation = self.entity.orientation
-  local delta_orientation = needed_orientation - orientation
+  local delta_orientation = target_orientation - orientation
 
   if delta_orientation < -0.5 then
     delta_orientation = delta_orientation + 1
@@ -229,8 +332,9 @@ Drone.update_orientation = function(self)
     self.entity.orientation = orientation - DRONE_TURN_SPEED
     self.needs_fast_update = true
   else
-    self.entity.orientation = needed_orientation
+    self.entity.orientation = target_orientation
   end
+  self:update_shadow_orientation()
 
 end
 
@@ -240,15 +344,36 @@ Drone.update_speed = function(self)
 
   if speed < DRONE_MIN_SPEED then
     self.entity.speed = DRONE_MIN_SPEED + DRONE_ACCELERATION
+    self:update_shadow_height()
     self.needs_fast_update = true
     return
   end
 
   if speed < DRONE_MAX_SPEED then
     self.entity.speed = speed + DRONE_ACCELERATION
+    self:update_shadow_height()
     self.needs_fast_update = true
   end
 
+end
+
+
+local logistic_curve = function(x)
+  local a = (x / (1 - x)) ^ 2
+  return 1 - (1 / (1 + a))
+end
+
+Drone.update_shadow_height = function(self)
+  local shadow = self.shadow
+  if not shadow then return end
+  local height = (logistic_curve(self.entity.speed / DRONE_MAX_SPEED)) * DRONE_HEIGHT
+  rendering.set_target(shadow, self.entity, {height, height})
+end
+
+Drone.update_shadow_orientation = function(self)
+  local shadow = self.shadow
+  if not shadow then return end
+  rendering.set_orientation(shadow, self.entity.orientation)
 end
 
 Drone.update = function(self)
@@ -256,6 +381,16 @@ Drone.update = function(self)
   if not self.entity.valid then
     self:cleanup()
     return true
+  end
+
+  if self.tick_to_suicide then
+    self:update_orientation(self.suicide_orientation)
+    if game.tick >= self.tick_to_suicide then
+      self:suicide()
+    else
+      self:add_to_drone_update_schedule(game.tick + 1)
+    end
+    return
   end
 
   local target = self.delivery_target
@@ -269,16 +404,15 @@ Drone.update = function(self)
   end
   --self:say("HI")
 
-  if self:get_distance_to_target() < 0.5 then
+  if self.entity.speed >= DRONE_MAX_SPEED and self:get_distance_to_target() <= DELIVERY_DISTANCE then
     self:deliver_to_target()
     return
   end
 
   self.needs_fast_update = false
   self:update_speed()
-  self:update_orientation()
-
-  add_to_drone_update_schedule(self, game.tick + self:get_time_to_next_update())
+  self:update_orientation(self:get_orientation_to_position(self:get_delivery_position()))
+  self:add_to_drone_update_schedule(game.tick + self:get_time_to_next_update())
 
 end
 
@@ -348,6 +482,9 @@ Depot.delivery_requested = function(self, request_depot, item_name, item_count)
   end
 
   item_count = min(item_count, self:get_available_capacity(item_name))
+  if item_count == 0 then
+    return 0
+  end
 
   local scheduled = self.scheduled
   scheduled[item_name] = (scheduled[item_name] or 0) + item_count
@@ -401,6 +538,15 @@ Depot.transfer_package = function(self, drone)
 
 end
 
+local empty_color = {r = 0, g = 0, b = 0}
+local get_force_color = function(force)
+  local index, player = next(force.players)
+  if player then
+    return player.color
+  end
+  return empty_color
+end
+
 Depot.send_drone = function(self)
 
   local target = self.delivery_target
@@ -419,6 +565,7 @@ Depot.send_drone = function(self)
     position = self.position,
     force = self.entity.force
   }
+  entity.color = get_force_color(self.entity.force)
 
   local drone = Drone.new(entity)
   self:transfer_package(drone)
