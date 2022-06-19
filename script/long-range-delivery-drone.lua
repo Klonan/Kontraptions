@@ -195,8 +195,9 @@ Drone.get_time_to_next_update = function(self)
   return min(ticks, DRONE_MAX_UPDATE_INTERVAL)
 end
 
-Drone.add_to_drone_update_schedule = function(self, tick)
+Drone.schedule_next_update = function(self, time)
   local scheduled = script_data.drone_update_schedule
+  local tick = game.tick + time
   local scheduled_drones = scheduled[tick]
   if not scheduled_drones then
     scheduled_drones = {}
@@ -253,7 +254,7 @@ end
 Drone.schedule_suicide = function(self)
   self.tick_to_suicide = game.tick + random(120, 300)
   self.suicide_orientation = self.entity.orientation + ((0.5 - random()) * 2)
-  self:add_to_drone_update_schedule(game.tick + random(1, 30))
+  self:schedule_next_update(random(1, 30))
 end
 
 Drone.make_delivery_particle = function(self)
@@ -261,44 +262,50 @@ Drone.make_delivery_particle = function(self)
   local position = self.entity.position
   local speed = self.entity.speed
   local time = distance / speed
-
-  local vertical_speed = -DRONE_HEIGHT / time
-
+  local delivery_height = DRONE_HEIGHT - 0.75
+  local vertical_speed = -delivery_height / time
 
   self.entity.surface.create_particle
   {
     name = "long-range-delivery-drone-delivery-particle",
-    position = {self.entity.position.x, self.entity.position.y + DRONE_HEIGHT},
+    position = {position.x, position.y + delivery_height},
     movement = self:get_movement(),
-    height = DRONE_HEIGHT,
+    height = delivery_height,
     vertical_speed = vertical_speed,
     frame_speed = 1
   }
 
+  return time
 end
 
 Drone.deliver_to_target = function(self)
   --self:say("Poopin time")
-  local target = self.delivery_target
-  local source_inventory = self.inventory
-  local source_scheduled = self.scheduled
-  local target_inventory = target.inventory
-  local target_scheduled = target.scheduled
-  for name, count in pairs(source_scheduled) do
-    local removed = source_inventory.remove({name = name, count = count})
+
+  local delivery_time
+  local name, count = next(self.scheduled)
+  if name then
+    local target_scheduled = self.delivery_target.scheduled
+    local removed = self.inventory.remove({name = name, count = count})
     if removed > 0 then
-      target_inventory.insert({name = name, count = removed})
+      self.delivery_target.inventory.insert({name = name, count = removed})
     end
-    source_scheduled[name] = nil
+    self.scheduled[name] = nil
     if target_scheduled[name] then
       target_scheduled[name] = target_scheduled[name] - count
       if target_scheduled[name] <= 0 then
         target_scheduled[name] = nil
       end
     end
+    delivery_time = self:make_delivery_particle()
   end
-  self:make_delivery_particle()
-  self:schedule_suicide()
+
+  if not next(self.scheduled) then
+    self:schedule_suicide()
+    self:say("Time to die")
+    return
+  end
+
+  self:schedule_next_update(ceil(delivery_time * 2) + random(10, 30))
 end
 
 Drone.cleanup = function(self)
@@ -387,7 +394,7 @@ Drone.update = function(self)
     if game.tick >= self.tick_to_suicide then
       self:suicide()
     else
-      self:add_to_drone_update_schedule(game.tick + 1)
+      self:schedule_next_update(1)
     end
     return
   end
@@ -411,7 +418,7 @@ Drone.update = function(self)
   self.needs_fast_update = false
   self:update_speed()
   self:update_orientation(self:get_orientation_to_position(self:get_delivery_position()))
-  self:add_to_drone_update_schedule(game.tick + self:get_time_to_next_update())
+  self:schedule_next_update(self:get_time_to_next_update())
 
 end
 

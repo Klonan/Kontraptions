@@ -93,7 +93,7 @@ local request_depot =
   type = "logistic-container",
   name = "long-range-delivery-drone-request-depot",
   localised_name = {"long-range-delivery-drone-request-depot"},
-  icon = "__base__/graphics/icons/logistic-chest-requester.png",
+  icon = "__Kontraptions__/data/long-range-delivery-drone/request-depot-icon.png",
   icon_size = 64, icon_mipmaps = 4,
   flags = {"placeable-player", "player-creation"},
   minable = {mining_time = 1, result = "long-range-delivery-drone-request-depot"},
@@ -125,13 +125,13 @@ local request_depot =
     layers =
     {
       {
-        filename = "__base__/graphics/entity/logistic-chest/hr-logistic-chest-requester.png",
+        filename = "__Kontraptions__/data/long-range-delivery-drone/request-depot.png",
         priority = "extra-high",
         width = 66,
         height = 74,
-        frame_count = 7,
+        frame_count = 1,
+        x = 66 * 6,
         shift = util.by_pixel(0, -2),
-        tint = {r = 1, g = 0.5, b = 0.5, a = 1},
         scale = 1
       },
       {
@@ -140,8 +140,8 @@ local request_depot =
         priority = "extra-high",
         width = 112,
         height = 46,
-        repeat_count = 7,
-        shift = util.by_pixel(12, 4.5),
+        repeat_count = 1,
+        shift = util.by_pixel(24, 9),
         draw_as_shadow = true,
         scale = 1,
       }
@@ -726,6 +726,7 @@ local delivery_particle =
   vertical_acceleration = 0,
   life_time = 1000,
   regular_trigger_effect_frequency = 9999,
+  render_layer = "projectile",
   pictures =
   {
     {
@@ -737,7 +738,6 @@ local delivery_particle =
       width = 58,
       height = 59,
       shift = util.by_pixel(1, 0.5),
-      priority = "high",
       scale = 0.5
     }
   },
@@ -750,8 +750,7 @@ local delivery_particle =
       animation_speed = 0.250,
       width = 54,
       height = 42,
-      shift = util.by_pixel(1, 2),
-      priority = "high",
+      shift = {0.75, 0.75},
       draw_as_shadow = true,
       scale = 0.5
     }
