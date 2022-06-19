@@ -301,7 +301,6 @@ Drone.deliver_to_target = function(self)
 
   if not next(self.scheduled) then
     self:schedule_suicide()
-    self:say("Time to die")
     return
   end
 

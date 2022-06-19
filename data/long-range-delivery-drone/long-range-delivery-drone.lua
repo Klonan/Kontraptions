@@ -12,6 +12,7 @@ local depot =
   selection_box = {{-1.5, -1.5}, {1.5, 1.5}},
   render_not_in_network_icon = false,
   landing_location_offset = {0,0},
+  scale_info_icons = true,
   resistances =
   {
     {
@@ -78,12 +79,11 @@ local depot_recipe =
 {
   type = "recipe",
   name = "long-range-delivery-drone-depot",
-  enabled = true,
+  enabled = false,
   ingredients =
   {
-    {"steel-chest", 1},
-    {"advanced-circuit", 5},
-    {"processing-unit", 5}
+    {"steel-chest", 4},
+    {"electronic-circuit", 5}
   },
   result = "long-range-delivery-drone-depot"
 }
@@ -182,12 +182,11 @@ local request_depot_recipe =
 {
   type = "recipe",
   name = "long-range-delivery-drone-request-depot",
-  enabled = true,
+  enabled = false,
   ingredients =
   {
     {"steel-chest", 1},
-    {"advanced-circuit", 5},
-    {"processing-unit", 5}
+    {"electronic-circuit", 5}
   },
   result = "long-range-delivery-drone-request-depot"
 }
@@ -532,7 +531,7 @@ local delivery_drone_recipe =
 {
   type = "recipe",
   name = "long-range-delivery-drone",
-  enabled = true,
+  enabled = false,
   ingredients =
   {
     {"engine-unit", 1},
@@ -757,6 +756,41 @@ local delivery_particle =
   }
 }
 
+local technology =
+{
+  type = "technology",
+  name = "long-range-delivery-drone",
+  icon = "__Kontraptions__/data/long-range-delivery-drone/tech-icon.png",
+  icon_size = 128,
+  effects =
+  {
+    {
+      type = "unlock-recipe",
+      recipe = "long-range-delivery-drone"
+    },
+    {
+      type = "unlock-recipe",
+      recipe = "long-range-delivery-drone-depot"
+    },
+    {
+      type = "unlock-recipe",
+      recipe = "long-range-delivery-drone-request-depot"
+    }
+  },
+  prerequisites = {"engine", "automation-2", "oil-processing"},
+  unit =
+  {
+    count = 500,
+    ingredients =
+    {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1}
+    },
+    time = 30
+  },
+  order = "a-d-b"
+}
+
 data:extend
 {
   depot,
@@ -770,5 +804,6 @@ data:extend
   delivery_drone_recipe,
   drone_dying_particle,
   delivery_particle,
-  drone_shadow_animation
+  drone_shadow_animation,
+  technology
 }
