@@ -3,16 +3,15 @@ local depot =
   type = "logistic-container",
   name = "long-range-delivery-drone-depot",
   localised_name = {"long-range-delivery-drone-depot"},
-  icon = "__base__/graphics/icons/logistic-chest-requester.png",
-  icon_size = 64, icon_mipmaps = 4,
+  icon = "__Kontraptions__/data/long-range-delivery-drone/depot-icon.png",
+  icon_size = 64,
   flags = {"placeable-player", "player-creation"},
   minable = {mining_time = 1, result = "long-range-delivery-drone-depot"},
   max_health = 350,
-  corpse = "requester-chest-remnants",
-  dying_explosion = "requester-chest-explosion",
-  collision_box = {{-0.85, -0.85}, {0.85, 0.85}},
-  selection_box = {{-1, -1}, {1, 1}},
+  collision_box = {{-1.35, -1.35}, {1.35, 1.35}},
+  selection_box = {{-1.5, -1.5}, {1.5, 1.5}},
   render_not_in_network_icon = false,
+  landing_location_offset = {0,0},
   resistances =
   {
     {
@@ -35,23 +34,12 @@ local depot =
     layers =
     {
       {
-        filename = "__base__/graphics/entity/logistic-chest/hr-logistic-chest-requester.png",
-        priority = "extra-high",
-        width = 66,
-        height = 74,
-        frame_count = 7,
+        filename = "__Kontraptions__/data/long-range-delivery-drone/depot.png",
+        width = 280,
+        height = 220,
+        frame_count = 1,
         shift = util.by_pixel(0, -2),
-        scale = 1
-      },
-      {
-        filename = "__base__/graphics/entity/logistic-chest/hr-logistic-chest-shadow.png",
-        priority = "extra-high",
-        width = 112,
-        height = 46,
-        repeat_count = 7,
-        shift = util.by_pixel(12, 4.5),
-        draw_as_shadow = true,
-        scale = 1
+        scale = 0.5
       }
     }
   },
@@ -547,10 +535,10 @@ local delivery_drone_recipe =
   enabled = true,
   ingredients =
   {
-    {"electric-engine-unit", 1},
-    {"advanced-circuit", 1},
-    {"steel-plate", 1},
-    {"battery", 1}
+    {"engine-unit", 1},
+    {"iron-gear-wheel", 10},
+    {"steel-plate", 5},
+    {"solid-fuel", 1}
   },
   result = "long-range-delivery-drone"
 }

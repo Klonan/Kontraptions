@@ -32,6 +32,11 @@ local sin = math.sin
 local cos = math.cos
 local random = math.random
 
+local logistic_curve = function(x)
+  local a = (x / (1 - x)) ^ 2
+  return 1 - (1 / (1 + a))
+end
+
 local distance_squared = function(a, b)
   local dx = a.x - b.x
   local dy = a.y - b.y
@@ -355,12 +360,6 @@ Drone.update_speed = function(self)
     self.needs_fast_update = true
   end
 
-end
-
-
-local logistic_curve = function(x)
-  local a = (x / (1 - x)) ^ 2
-  return 1 - (1 / (1 + a))
 end
 
 Drone.update_shadow_height = function(self)
