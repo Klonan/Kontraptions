@@ -115,7 +115,7 @@ local request_depot =
     }
   },
   fast_replaceable_group = "container",
-  inventory_size = 80,
+  inventory_size = 69,
   logistic_mode = "buffer",
   open_sound = { filename = "__base__/sound/metallic-chest-open.ogg", volume=0.43 },
   close_sound = { filename = "__base__/sound/metallic-chest-close.ogg", volume = 0.43 },

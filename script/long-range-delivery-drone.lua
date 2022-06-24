@@ -252,6 +252,7 @@ Drone.suicide = function(self)
 end
 
 Drone.schedule_suicide = function(self)
+  self.delivery_target:remove_targeting_me(self)
   self.tick_to_suicide = game.tick + random(120, 300)
   self.suicide_orientation = self.entity.orientation + ((0.5 - random()) * 2)
   self:schedule_next_update(random(1, 30))
@@ -381,6 +382,16 @@ Drone.update_shadow_orientation = function(self)
   rendering.set_orientation(shadow, self.entity.orientation)
 end
 
+Drone.get_state_description = function(self)
+  local text = "On the way "
+  local distance = ceil(self:get_distance_to_target())
+  text = text .. "[" .. distance .. "m]"
+  for name, count in pairs(self.scheduled) do
+    text = text .. " [item=" .. name .. "]"
+  end
+  return text
+end
+
 Drone.update = function(self)
 
   if not self.entity.valid then
@@ -494,6 +505,8 @@ Depot.delivery_requested = function(self, request_depot, item_name, item_count)
   local scheduled = self.scheduled
   scheduled[item_name] = (scheduled[item_name] or 0) + item_count
   self:update_logistic_filters()
+
+  self.delivery_target:add_targeting_me(self)
   return item_count
 end
 
@@ -576,7 +589,10 @@ Depot.send_drone = function(self)
   self:transfer_package(drone)
 
   drone.delivery_target = target
+  target:add_targeting_me(drone)
+
   self.delivery_target = nil
+  target:remove_targeting_me(self)
 
   drone:update()
 
@@ -585,6 +601,7 @@ end
 Depot.cleanup = function(self)
 
   if self.delivery_target then
+    self.delivery_target:remove_targeting_me(self)
     local source_scheduled = self.scheduled
     local target_scheduled = self.delivery_target.scheduled
     for name, count in pairs(source_scheduled) do
@@ -613,6 +630,17 @@ Depot.check_send_drone = function(self)
   if all_fulfilled then
     self:send_drone()
   end
+end
+
+Depot.get_state_description = function(self)
+  if not self.delivery_target then
+    return ""
+  end
+  local text = "Preparing delivery"
+  for name, count in pairs(self.scheduled) do
+    text = text .. " [item=" .. name .. "]"
+  end
+  return text
 end
 
 Depot.update = function(self)
@@ -667,6 +695,16 @@ end
 
 Request_depot.say = function(self, text)
   entity_say(self.entity, text, {r = 1, g = 0.5, b = 0})
+end
+
+Request_depot.add_targeting_me = function(self, other)
+  self.targeting_me = self.targeting_me or {}
+  self.targeting_me[other.unit_number] = other
+end
+
+Request_depot.remove_targeting_me = function(self, other)
+  self.targeting_me = self.targeting_me or {}
+  self.targeting_me[other.unit_number] = nil
 end
 
 Request_depot.get_closest = function(self, depots)
@@ -741,6 +779,88 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
     item_count = item_count - scheduled_count
   end
 
+
+end
+
+Request_depot.on_gui_opened = function(self, player)
+  local gui = player.gui.relative
+  local relative_gui = player.gui.relative.request_depot_gui
+  if not relative_gui then
+    relative_gui = player.gui.relative.add
+    {
+      type = "frame",
+      name = "request_depot_gui",
+      caption = {"request-depot"},
+      direction = "vertical",
+      anchor =
+      {
+        gui = defines.relative_gui_type.container_gui,
+        name = self.entity.name,
+        position = defines.relative_gui_position.bottom
+        --position = defines.relative_gui_position.right
+        --position = defines.relative_gui_position.left
+      }
+    }
+    --relative_gui.style.vertically_stretchable = true
+    relative_gui.style.horizontally_stretchable = false
+    --relative_gui.style.width = 884
+  end
+  relative_gui.clear()
+
+  local inner = relative_gui.add
+  {
+    type = "frame",
+    direction = "vertical",
+    style = "inside_deep_frame"
+  }
+
+  local table = inner.add
+  {
+    type = "table",
+    column_count = 4,
+    style = "trains_table"
+  }
+
+  for unit_number, targeting_me in pairs (self.targeting_me) do
+    local frame = table.add
+    {
+      type = "frame",
+      direction = "vertical",
+      style = "train_with_minimap_frame"
+    }
+    frame.style.width = 215
+    frame.style.height = 215 + 12 + 28
+    local button = frame.add
+    {
+      type = "button",
+      style = "locomotive_minimap_button"
+    }
+    button.style.width = 191
+    button.style.height = 191
+    --button.style.horizontally_stretchable = true
+    --button.style.vertically_stretchable = true
+    local camera = button.add
+    {
+      type = "minimap",
+      position = targeting_me.position or {0,0},
+      zoom = 2
+    }
+    camera.entity = targeting_me.entity
+    local size = 884
+    camera.style.minimal_width = 191
+    camera.style.minimal_height = 191
+    camera.style.horizontally_stretchable = true
+    camera.style.vertically_stretchable = true
+    camera.ignored_by_interaction = true
+    local deep = frame.add{type = "frame", style = "deep_frame_in_shallow_frame"}
+    local status = deep.add
+    {
+      type = "button", style = "train_status_button", caption = targeting_me:get_state_description()
+    }
+    status.style.horizontally_stretchable = true
+    status.style.width = 0
+    status.style.natural_width = 0
+  end
 
 end
 
@@ -845,11 +965,25 @@ local on_tick = function(event)
   update_drones(event.tick)
 end
 
+local on_gui_opened = function(event)
+  local entity = event.entity
+  if not (entity and entity.valid) then return end
+  local request_depot = script_data.request_depots[entity.unit_number]
+  if not request_depot then return end
+
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  request_depot:on_gui_opened(player)
+
+end
+
 local lib = {}
 
 lib.events =
 {
   [defines.events.on_script_trigger_effect] = on_script_trigger_effect,
+  [defines.events.on_gui_opened] = on_gui_opened,
   [defines.events.on_tick] = on_tick
 }
 
