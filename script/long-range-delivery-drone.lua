@@ -828,7 +828,9 @@ local add_or_update_targeting_panel = function(targeting_me, gui)
     local button = frame.add
     {
       type = "button",
-      style = "locomotive_minimap_button"
+      style = "locomotive_minimap_button",
+      name = "click_to_open_on_map",
+      tags = {unit_number = targeting_me.unit_number},
     }
     button.style.width = 176
     button.style.height = 176
@@ -929,10 +931,10 @@ Request_depot.update_gui = function(self, player)
   local relative_gui = get_or_make_relative_gui(player)
   local table = get_panel_table(relative_gui)
   local targeting_me = self.targeting_me
+  relative_gui.visible = next(targeting_me)
   for unit_number, other in pairs(targeting_me) do
     add_or_update_targeting_panel(other, table)
   end
-
   for k, child in pairs(table.children) do
     local name = child.name
     if name and not targeting_me[tonumber(name)]  then
@@ -1058,12 +1060,13 @@ local update_player_opened = function(player)
 end
 
 local update_guis = function(tick)
-  if tick % GUI_UPDATE_INTERVAL ~= 0 then return end
   if not (script_data.gui_updates and next(script_data.gui_updates)) then return end
   local players = game.players
   for player_index, player in pairs(script_data.gui_updates) do
-    if update_player_opened(player) then
-      script_data.gui_updates[player_index] = nil
+    if (player_index + tick) % GUI_UPDATE_INTERVAL == 0 then
+      if update_player_opened(player) then
+        script_data.gui_updates[player_index] = nil
+      end
     end
   end
 end
@@ -1090,12 +1093,41 @@ local on_gui_opened = function(event)
 
 end
 
+local open_on_map = function(player, entity)
+  if not (entity and entity.valid) then return end
+  player.opened = nil
+  player.open_map(entity.position, 1/8)
+end
+
+local on_gui_click = function(event)
+  local gui = event.element
+  if not (gui and gui.valid) then return end
+  local name = gui.name
+  if not (name and name == "click_to_open_on_map") then return end
+  local unit_number = gui.tags.unit_number
+  if not unit_number then return end
+
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  local depot = script_data.depots[unit_number]
+  if depot then
+    open_on_map(player, depot.entity)
+  end
+
+  local drone = script_data.drones[unit_number]
+  if drone then
+    open_on_map(player, drone.entity)
+  end
+end
+
 local lib = {}
 
 lib.events =
 {
   [defines.events.on_script_trigger_effect] = on_script_trigger_effect,
   [defines.events.on_gui_opened] = on_gui_opened,
+  [defines.events.on_gui_click] = on_gui_click,
   [defines.events.on_tick] = on_tick
 }
 
