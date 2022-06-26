@@ -289,20 +289,28 @@ Drone.deliver_to_target = function(self)
   --self:say("Poopin time")
 
   local delivery_time
-  local name, count = next(self.scheduled)
+  local source_scheduled = self.scheduled
+  local name, count = next(source_scheduled)
+  count = min(count, get_stack_size(name))
   if name then
     local target_scheduled = self.delivery_target.scheduled
     local removed = self.inventory.remove({name = name, count = count})
     if removed > 0 then
       self.delivery_target.inventory.insert({name = name, count = removed})
     end
-    self.scheduled[name] = nil
+
+    source_scheduled[name] = source_scheduled[name] - count
+    if source_scheduled[name] <= 0 then
+      source_scheduled[name] = nil
+    end
+
     if target_scheduled[name] then
       target_scheduled[name] = target_scheduled[name] - count
       if target_scheduled[name] <= 0 then
         target_scheduled[name] = nil
       end
     end
+
     delivery_time = self:make_delivery_particle()
   end
 
@@ -496,6 +504,7 @@ Depot.update_logistic_filters = function(self)
   for i = slot_index, self.entity.request_slot_count do
     self.entity.clear_request_slot(i)
   end
+  self.entity.request_from_buffers = true
 end
 
 Depot.delivery_requested = function(self, request_depot, item_name, item_count)
@@ -526,14 +535,30 @@ Depot.can_handle_request = function(self, request_depot)
     return false
   end
 
+  if (self.entity.logistic_network == request_depot.entity.logistic_network) then
+    return false
+  end
+
   local inventory_count = self:get_inventory_count(DRONE_NAME)
   if inventory_count > 0 then
     return true
   end
 
-  local network_count = self:get_network_count(DRONE_NAME)
+  local network_count = self:get_network_storage_count(DRONE_NAME)
   if network_count > 0 then
     return true
+  end
+
+  local pickup_point = self:get_pickup_point(DRONE_NAME)
+  if pickup_point then
+    return true
+  end
+
+  if self.entity.request_from_buffers then
+    local buffer_point = self:get_buffer_pickup_point(DRONE_NAME)
+    if buffer_point then
+      return true
+    end
   end
 
   return false
@@ -543,9 +568,30 @@ Depot.get_inventory_count = function(self, item_name)
   return self.inventory.get_item_count(item_name) - (self.scheduled[item_name] or 0)
 end
 
-Depot.get_network_count = function(self, item_name)
+Depot.get_network_storage_count = function(self, item_name)
   local network = self.entity.logistic_network
-  return (network and network.get_item_count(item_name)) or 0
+  if not network then return 0 end
+  return network.get_item_count(item_name, "storage")
+end
+
+Depot.get_pickup_point = function(self, item_name)
+  local network = self.entity.logistic_network
+  return network and network.select_pickup_point
+  {
+    name = item_name,
+    position = self.position,
+    include_buffers = false
+  }
+end
+
+Depot.get_buffer_pickup_point = function(self, item_name)
+  local network = self.entity.logistic_network
+  return network and network.select_pickup_point
+  {
+    name = item_name,
+    position = self.position,
+    include_buffers = true
+  }
 end
 
 Depot.transfer_package = function(self, drone)
@@ -673,6 +719,7 @@ Depot.update = function(self)
   end
 
   self:check_send_drone()
+  self:update_logistic_filters()
   --self:say("All fulfilled! Send it!")
 
 end
@@ -759,11 +806,21 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
         if inventory_count >= request_count then
           depots_with_item[unit_number] = depot
         else
-          local network_count = depot:get_network_count(item_name)
+          local network_count = depot:get_network_storage_count(item_name)
           if network_count >= request_count then
             depots_that_can_request_item[unit_number] = depot
           elseif network_count >= stack_size * MIN_DELIVERY_STACKS then
             depots_that_can_request_some_items[unit_number] = depot
+          else
+            local pickup_point = depot:get_pickup_point(item_name)
+            if pickup_point then
+              depots_that_can_request_item[unit_number] = depot
+            elseif depot.entity.request_from_buffers then
+              local buffer_point = depot:get_buffer_pickup_point(item_name)
+              if buffer_point then
+                depots_that_can_request_some_items[unit_number] = depot
+              end
+            end
           end
         end
       end
@@ -792,16 +849,14 @@ end
 
 local add_or_update_scheduled = function(scheduled, table)
   for name, count in pairs(scheduled) do
-    if not table[name] then
-      table.add
-      {
-        type = "sprite-button",
-        name = name,
-        sprite = "item/" .. name,
-        style = "transparent_slot",
-        number = count
-      }
-    end
+    local button = table[name] or table.add
+    {
+      type = "sprite-button",
+      name = name,
+      sprite = "item/" .. name,
+      style = "transparent_slot"
+    }
+    button.number = count
   end
   for k, child in pairs(table.children) do
     local name = child.name
@@ -930,7 +985,7 @@ end
 Request_depot.update_gui = function(self, player)
   local relative_gui = get_or_make_relative_gui(player)
   local table = get_panel_table(relative_gui)
-  local targeting_me = self.targeting_me
+  local targeting_me = self.targeting_me or {}
   relative_gui.visible = next(targeting_me)
   for unit_number, other in pairs(targeting_me) do
     add_or_update_targeting_panel(other, table)
