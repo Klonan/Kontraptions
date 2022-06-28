@@ -505,7 +505,6 @@ Depot.update_logistic_filters = function(self)
   for i = slot_index, self.entity.request_slot_count do
     self.entity.clear_request_slot(i)
   end
-  self.entity.request_from_buffers = true
 end
 
 Depot.delivery_requested = function(self, request_depot, item_name, item_count)
@@ -531,6 +530,11 @@ Depot.delivery_requested = function(self, request_depot, item_name, item_count)
   return item_count
 end
 
+Depot.network_can_satisfy_request = function(self, item_name, count, request_from_buffers)
+  local network = self.entity.logistic_network
+  return network and network.can_satisfy_request(item_name, count, request_from_buffers)
+end
+
 
 Depot.can_handle_request = function(self, request_depot)
   if self.delivery_target and self.delivery_target ~= request_depot then
@@ -543,6 +547,10 @@ Depot.can_handle_request = function(self, request_depot)
 
   local inventory_count = self:get_inventory_count(DRONE_NAME)
   if inventory_count > 0 then
+    return true
+  end
+
+  if self:network_can_satisfy_request(DRONE_NAME) then
     return true
   end
 
@@ -635,13 +643,18 @@ Depot.send_drone = function(self)
     return
   end
 
+  local force = self.entity.force
+
   local entity = self.entity.surface.create_entity
   {
     name = DRONE_NAME,
     position = self.position,
-    force = self.entity.force
+    force = force
   }
-  entity.color = get_force_color(self.entity.force)
+  entity.color = get_force_color(force)
+
+  force.item_production_statistics.on_flow(DRONE_NAME, -1)
+
 
   local drone = Drone.new(entity)
   self:transfer_package(drone)
@@ -734,6 +747,11 @@ Depot.get_state_description = function(self)
     text = text .. " [item=" .. name .. "]"
   end
   return text
+end
+
+Depot.get_supply_counts = function(self, name)
+  local network = self.entity.logistic_network
+  return network and network.get_supply_counts(name)
 end
 
 Depot.update = function(self)
@@ -831,58 +849,71 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
 
   local request_count = min(item_count, stack_size * MAX_DELIVERY_STACKS)
 
-  local depots_with_item = {}
-  local depots_that_can_request_item = {}
-  local depots_that_can_request_some_items = {}
+  local depots_to_check = {{}, {}, {}, {}}
+
+  local check_depot = function(unit_number, depot)
+    if depot:get_available_capacity(item_name) < stack_size * MIN_DELIVERY_STACKS then
+      return
+    end
+
+    local inventory_count = depot:get_inventory_count(item_name)
+    if inventory_count >= request_count then
+      depots_to_check[1][unit_number] = depot
+      return
+    end
+
+
+    local supply_counts = depot:get_supply_counts(item_name)
+    if not supply_counts then return end
+
+    local count = supply_counts["storage"] + supply_counts["passive-provider"] + supply_counts["active-provider"]
+    if count >= request_count then
+      depots_to_check[2][unit_number] = depot
+      return
+    end
+
+    if self.entity.request_from_buffers then
+      count = count + supply_counts["buffer"]
+      if count >= request_count then
+        depots_to_check[3][unit_number] = depot
+        return
+      end
+    end
+
+    if count >= stack_size * MIN_DELIVERY_STACKS then
+      depots_to_check[4][unit_number] = depot
+      return
+    end
+  end
 
   for unit_number, depot in pairs (depots) do
     if not depot.entity.valid then
       depots[unit_number] = nil
     elseif depot:can_handle_request(self) then
-      local capacity = depot:get_available_capacity(item_name)
-      --depot:say("              "..capacity)
-      if capacity >= stack_size * MIN_DELIVERY_STACKS then
-        local inventory_count = depot:get_inventory_count(item_name)
-        if inventory_count >= request_count then
-          depots_with_item[unit_number] = depot
-        else
-          local network_count = depot:get_network_storage_count(item_name)
-          if network_count >= request_count then
-            depots_that_can_request_item[unit_number] = depot
-          elseif network_count >= stack_size * MIN_DELIVERY_STACKS then
-            depots_that_can_request_some_items[unit_number] = depot
-          else
-            local pickup_point = depot:get_pickup_point(item_name)
-            if pickup_point then
-              depots_that_can_request_item[unit_number] = depot
-            elseif depot.entity.request_from_buffers then
-              local buffer_point = depot:get_buffer_pickup_point(item_name)
-              if buffer_point then
-                depots_that_can_request_some_items[unit_number] = depot
-              end
-            end
-          end
-        end
-      end
+      check_depot(unit_number, depot)
     end
   end
 
   local scheduled = self.scheduled
-  while true do
 
-    local closest = self:get_closest(depots_with_item) or self:get_closest(depots_that_can_request_item) or self:get_closest(depots_that_can_request_some_items)
-    if not closest then
-      return
+  local closest
+  for k, list in pairs(depots_to_check) do
+    if next(list) then
+      closest = self:get_closest(list)
+      if closest then
+        break
+      end
     end
-
-    local scheduled_count = closest:delivery_requested(self, item_name, item_count)
-    if scheduled_count == 0 then return end
-
-    scheduled[item_name] = (scheduled[item_name] or 0) + scheduled_count
-    if item_count == scheduled_count then return end
-
-    item_count = item_count - scheduled_count
   end
+  if not closest then return end
+
+  local scheduled_count = closest:delivery_requested(self, item_name, item_count)
+  if scheduled_count == 0 then return end
+
+  scheduled[item_name] = (scheduled[item_name] or 0) + scheduled_count
+  if item_count == scheduled_count then return end
+
+  item_count = item_count - scheduled_count
 
 
 end
@@ -1043,7 +1074,7 @@ Request_depot.update = function(self)
   if not entity.valid then
     return true
   end
-  self:say("Hello")
+  --self:say("Hello")
   local point = entity.get_logistic_point()
   if not point then
     return
@@ -1052,15 +1083,22 @@ Request_depot.update = function(self)
 
   local inventory = self.inventory
   local scheduled = self.scheduled
-  --self:say(serpent.block(scheduled))
+  local on_the_way = point.targeted_items_deliver or {}
   for slot_index = 1, entity.request_slot_count do
     local request = entity.get_request_slot(slot_index)
     if request then
       local name = request.name
       local scheduled_count = scheduled[name] or 0
       local container_count = inventory.get_item_count(name)
-      local needed = request.count - (container_count + scheduled_count)
-      if needed >= (get_stack_size(name) * MIN_DELIVERY_STACKS) then
+      local on_the_way_count = on_the_way[name] or 0
+      local stack_size = get_stack_size(name)
+      local needed = request.count - (container_count + scheduled_count + on_the_way_count)
+
+      if needed >= stack_size * MAX_DELIVERY_STACKS then
+        self:try_to_schedule_delivery(name, stack_size * MAX_DELIVERY_STACKS)
+      elseif container_count >= stack_size * MAX_DELIVERY_STACKS then
+        -- We have loads already
+      elseif needed >= (stack_size * MIN_DELIVERY_STACKS) then
         self:try_to_schedule_delivery(name, needed)
       end
     end
@@ -1113,7 +1151,7 @@ local update_request_depots = function(tick)
     script_data.request_depots[unit_number] = nil
     script_data.next_request_depot_update_index = nil
   else
-    depot:say(unit_number)
+    --depot:say(unit_number)
     script_data.next_request_depot_update_index = unit_number
   end
 end
@@ -1129,7 +1167,7 @@ local update_depots = function(tick)
     script_data.depots[unit_number] = nil
     script_data.next_depot_update_index = nil
   else
-    depot:say(unit_number)
+    --depot:say(unit_number)
     script_data.next_depot_update_index = unit_number
   end
 end
