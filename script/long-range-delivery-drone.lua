@@ -11,6 +11,7 @@ local DELIVERY_DISTANCE = 25
 local DRONE_NAME = "long-range-delivery-drone"
 local MAX_DELIVERY_STACKS = 5
 local MIN_DELIVERY_STACKS = 1
+local DEPOT_ORDER_TIMEOUT = 2 * 60 * 60
 local script_data =
 {
   request_depots = {},
@@ -514,6 +515,7 @@ Depot.delivery_requested = function(self, request_depot, item_name, item_count)
 
   if not self.delivery_target then
     self.delivery_target = request_depot
+    self.tick_of_recieved_order = game.tick
   end
 
   item_count = min(item_count, self:get_available_capacity(item_name))
@@ -648,9 +650,12 @@ Depot.send_drone = function(self)
   target:add_targeting_me(drone)
 
   self.delivery_target = nil
+  self.tick_of_recieved_order = nil
   target:remove_targeting_me(self)
 
   drone:update()
+
+  return true
 
 end
 
@@ -670,20 +675,55 @@ Depot.cleanup = function(self)
   end
 end
 
-Depot.check_send_drone = function(self)
+Depot.has_all_fulfilled = function(self)
   local scheduled = self.scheduled
   local inventory = self.inventory
   local get_item_count = inventory.get_item_count
-  local all_fulfilled = true
-  for name, count in pairs(self.scheduled) do
+
+  for name, count in pairs(scheduled) do
     local has_count = get_item_count(name)
     if name == DRONE_NAME then has_count = has_count - 1 end
     if has_count < count then
-      all_fulfilled = false
-      break
+      return
     end
   end
-  if all_fulfilled then
+  return true
+end
+
+Depot.has_order_timeout = function(self)
+  local tick = self.tick_of_recieved_order
+  if not tick then return end
+  if game.tick >= (tick + DEPOT_ORDER_TIMEOUT) then
+    self:say("Depot order timeout")
+    return true
+  end
+end
+
+Depot.descope_order = function(self)
+  local scheduled = self.scheduled
+  local inventory = self.inventory
+  local get_item_count = inventory.get_item_count
+  local target_scheduled = self.delivery_target.scheduled
+  for name, count in pairs(scheduled) do
+    local has_count = get_item_count(name)
+    scheduled[name] = has_count
+    if scheduled[name] <= 0 then
+      scheduled[name] = nil
+    end
+    target_scheduled[name] = ((target_scheduled[name] or 0) - count) + has_count
+    if target_scheduled[name] <= 0 then
+      target_scheduled[name] = nil
+    end
+  end
+end
+
+Depot.check_send_drone = function(self)
+  if self:has_order_timeout() then
+    self:descope_order()
+    self:send_drone()
+    return
+  end
+  if self:has_all_fulfilled() then
     self:send_drone()
   end
 end
@@ -1003,7 +1043,7 @@ Request_depot.update = function(self)
   if not entity.valid then
     return true
   end
-  --self:say("Hello")
+  self:say("Hello")
   local point = entity.get_logistic_point()
   if not point then
     return
@@ -1062,7 +1102,39 @@ local on_script_trigger_effect = function(event)
   end
 end
 
+local update_request_depots = function(tick)
+  local index = script_data.next_request_depot_update_index
+  local unit_number, depot = next(script_data.request_depots, index)
+  if not unit_number then
+    script_data.next_request_depot_update_index = nil
+    return
+  end
+  if depot:update() then
+    script_data.request_depots[unit_number] = nil
+    script_data.next_request_depot_update_index = nil
+  else
+    depot:say(unit_number)
+    script_data.next_request_depot_update_index = unit_number
+  end
+end
+
 local update_depots = function(tick)
+  local index = script_data.next_depot_update_index
+  local unit_number, depot = next(script_data.depots, index)
+  if not unit_number then
+    script_data.next_depot_update_index = nil
+    return
+  end
+  if depot:update() then
+    script_data.depots[unit_number] = nil
+    script_data.next_depot_update_index = nil
+  else
+    depot:say(unit_number)
+    script_data.next_depot_update_index = unit_number
+  end
+end
+
+local old_update_depots = function(tick)
   local bucket_index = tick % DEPOT_UPDATE_INTERVAL
   local bucket = script_data.depot_update_buckets[bucket_index]
   if not bucket then return end
@@ -1070,10 +1142,11 @@ local update_depots = function(tick)
   for unit_number, depot in pairs(bucket) do
     if depot:update() then
       bucket[unit_number] = nil
-      if not next(bucket) then
-        script_data.depots[bucket_index] = nil
-      end
     end
+  end
+
+  if not next(bucket) then
+    script_data.depots[bucket_index] = nil
   end
 
 end
@@ -1127,6 +1200,7 @@ local update_guis = function(tick)
 end
 
 local on_tick = function(event)
+  update_request_depots(event.tick)
   update_depots(event.tick)
   update_drones(event.tick)
   update_guis(event.tick)
