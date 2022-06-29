@@ -1,4 +1,5 @@
 local DEPOT_UPDATE_INTERVAL = 101
+local DEPOT_UPDATE_BREAK_TIME = 61
 local GUI_UPDATE_INTERVAL = 6
 local DRONE_MAX_UPDATE_INTERVAL = 300
 local DRONE_MIN_SPEED = 0.01
@@ -12,6 +13,7 @@ local DRONE_NAME = "long-range-delivery-drone"
 local MAX_DELIVERY_STACKS = 5
 local MIN_DELIVERY_STACKS = 1
 local DEPOT_ORDER_TIMEOUT = 2 * 60 * 60
+local DEPOT_ORDER_MINIMAL_TIME = 10 * 60
 local script_data =
 {
   request_depots = {},
@@ -485,6 +487,7 @@ Depot.get_available_capacity = function(self, item_name)
       stacks = stacks - ceil(count / get_stack_size(name))
     end
   end
+  if not item_name then return stacks end
   return floor(stacks * (get_stack_size(item_name)) - (self.scheduled[item_name] or 0))
 end
 
@@ -512,21 +515,23 @@ Depot.delivery_requested = function(self, request_depot, item_name, item_count)
     error("Trying to schedule a delivery to another target")
   end
 
-  if not self.delivery_target then
-    self.delivery_target = request_depot
-    self.tick_of_recieved_order = game.tick
-  end
-
   item_count = min(item_count, self:get_available_capacity(item_name))
   if item_count == 0 then
     return 0
   end
 
+  if not self.delivery_target then
+    self.delivery_target = request_depot
+    self.delivery_target:add_targeting_me(self)
+  end
+
+
+  self.tick_of_recieved_order = game.tick
+
   local scheduled = self.scheduled
   scheduled[item_name] = (scheduled[item_name] or 0) + item_count
   self:update_logistic_filters()
 
-  self.delivery_target:add_targeting_me(self)
   return item_count
 end
 
@@ -730,12 +735,28 @@ Depot.descope_order = function(self)
   end
 end
 
+Depot.check_minimal_order_time = function(self)
+  -- If we are processing too quick, then we might miss some orders the player is setting, so if there is still capacity, we wait a little while
+  if not self.tick_of_recieved_order then return end
+  local capacity = self:get_available_capacity()
+  if capacity <= 0 then return end
+  local tick = self.tick_of_recieved_order
+  if game.tick < (self.tick_of_recieved_order + DEPOT_ORDER_MINIMAL_TIME) then
+    return true
+  end
+end
+
 Depot.check_send_drone = function(self)
+  if self:check_minimal_order_time() then
+    return
+  end
+
   if self:has_order_timeout() then
     self:descope_order()
     self:send_drone()
     return
   end
+
   if self:has_all_fulfilled() then
     self:send_drone()
   end
@@ -1082,6 +1103,7 @@ Request_depot.update = function(self)
 
 
   local inventory = self.inventory
+  local contents = inventory.get_contents()
   local scheduled = self.scheduled
   local on_the_way = point.targeted_items_deliver or {}
   for slot_index = 1, entity.request_slot_count do
@@ -1089,7 +1111,7 @@ Request_depot.update = function(self)
     if request then
       local name = request.name
       local scheduled_count = scheduled[name] or 0
-      local container_count = inventory.get_item_count(name)
+      local container_count = contents[name] or 0
       local on_the_way_count = on_the_way[name] or 0
       local stack_size = get_stack_size(name)
       local needed = request.count - (container_count + scheduled_count + on_the_way_count)
@@ -1142,6 +1164,9 @@ end
 
 local update_request_depots = function(tick)
   local index = script_data.next_request_depot_update_index
+  if not index and tick % DEPOT_UPDATE_BREAK_TIME ~= 0 then
+    return
+  end
   local unit_number, depot = next(script_data.request_depots, index)
   if not unit_number then
     script_data.next_request_depot_update_index = nil
@@ -1158,6 +1183,9 @@ end
 
 local update_depots = function(tick)
   local index = script_data.next_depot_update_index
+  if not index and tick % DEPOT_UPDATE_BREAK_TIME ~= 0 then
+    return
+  end
   local unit_number, depot = next(script_data.depots, index)
   if not unit_number then
     script_data.next_depot_update_index = nil
