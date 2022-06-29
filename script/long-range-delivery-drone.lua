@@ -346,8 +346,11 @@ Drone.update_orientation = function(self, target_orientation)
   end
 
   local orientation = self.entity.orientation
-  local delta_orientation = target_orientation - orientation
+  if orientation == target_orientation then
+    return
+  end
 
+  local delta_orientation = target_orientation - orientation
   if delta_orientation < -0.5 then
     delta_orientation = delta_orientation + 1
   elseif delta_orientation > 0.5 then
@@ -555,25 +558,8 @@ Depot.can_handle_request = function(self, request_depot)
     return true
   end
 
-  if self:network_can_satisfy_request(DRONE_NAME) then
+  if self:network_can_satisfy_request(DRONE_NAME, 1, self.entity.request_from_buffers) then
     return true
-  end
-
-  local network_count = self:get_network_storage_count(DRONE_NAME)
-  if network_count > 0 then
-    return true
-  end
-
-  local pickup_point = self:get_pickup_point(DRONE_NAME)
-  if pickup_point then
-    return true
-  end
-
-  if self.entity.request_from_buffers then
-    local buffer_point = self:get_buffer_pickup_point(DRONE_NAME)
-    if buffer_point then
-      return true
-    end
   end
 
   return false
@@ -581,32 +567,6 @@ end
 
 Depot.get_inventory_count = function(self, item_name)
   return self.inventory.get_item_count(item_name) - (self.scheduled[item_name] or 0)
-end
-
-Depot.get_network_storage_count = function(self, item_name)
-  local network = self.entity.logistic_network
-  if not network then return 0 end
-  return network.get_item_count(item_name, "storage")
-end
-
-Depot.get_pickup_point = function(self, item_name)
-  local network = self.entity.logistic_network
-  return network and network.select_pickup_point
-  {
-    name = item_name,
-    position = self.position,
-    include_buffers = false
-  }
-end
-
-Depot.get_buffer_pickup_point = function(self, item_name)
-  local network = self.entity.logistic_network
-  return network and network.select_pickup_point
-  {
-    name = item_name,
-    position = self.position,
-    include_buffers = true
-  }
 end
 
 Depot.transfer_package = function(self, drone)
@@ -814,6 +774,7 @@ Request_depot.new = function(entity)
     position = entity.position,
     scheduled = {},
     inventory = entity.get_inventory(defines.inventory.chest),
+    logistic_point = entity.get_logistic_point(),
     targeting_me = {}
   }
   script.register_on_entity_destroyed(entity)
@@ -883,7 +844,6 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
       return
     end
 
-
     local supply_counts = depot:get_supply_counts(item_name)
     if not supply_counts then return end
 
@@ -932,10 +892,7 @@ Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
   if scheduled_count == 0 then return end
 
   scheduled[item_name] = (scheduled[item_name] or 0) + scheduled_count
-  if item_count == scheduled_count then return end
-
-  item_count = item_count - scheduled_count
-
+  closest:update()
 
 end
 
@@ -1091,23 +1048,16 @@ Request_depot.update_gui = function(self, player)
 end
 
 Request_depot.update = function(self)
-  local entity = self.entity
-  if not entity.valid then
+  if not self.entity.valid then
     return true
   end
-  --self:say("Hello")
-  local point = entity.get_logistic_point()
-  if not point then
-    return
-  end
-
-
-  local inventory = self.inventory
-  local contents = inventory.get_contents()
+  local contents = self.inventory.get_contents()
   local scheduled = self.scheduled
-  local on_the_way = point.targeted_items_deliver or {}
-  for slot_index = 1, entity.request_slot_count do
-    local request = entity.get_request_slot(slot_index)
+  local on_the_way = self.logistic_point.targeted_items_deliver or {}
+  local get_request_slot = self.entity.get_request_slot
+
+  for slot_index = 1, self.entity.request_slot_count do
+    local request = get_request_slot(slot_index)
     if request then
       local name = request.name
       local scheduled_count = scheduled[name] or 0
@@ -1129,7 +1079,6 @@ Request_depot.update = function(self)
 end
 
 local depot_created = function(event)
-  --game.print("Depot created")
   local entity = event.source_entity
   if not (entity and entity.valid) then
     return
@@ -1139,7 +1088,6 @@ local depot_created = function(event)
 end
 
 local request_depot_created = function(event)
-  --game.print("Request depot created")
   local entity = event.source_entity
   if not (entity and entity.valid) then
     return
@@ -1266,10 +1214,11 @@ local update_guis = function(tick)
 end
 
 local on_tick = function(event)
-  update_request_depots(event.tick)
-  update_depots(event.tick)
-  update_drones(event.tick)
-  update_guis(event.tick)
+  local tick = event.tick
+  update_request_depots(tick)
+  update_depots(tick)
+  update_drones(tick)
+  update_guis(tick)
 end
 
 local on_gui_opened = function(event)
