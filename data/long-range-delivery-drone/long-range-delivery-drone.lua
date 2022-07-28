@@ -14,6 +14,7 @@ local depot =
   landing_location_offset = {0,0},
   scale_info_icons = true,
   use_exact_mode = true,
+  inventory_type = "with_filters_and_bar",
   resistances =
   {
     {
@@ -26,7 +27,7 @@ local depot =
     }
   },
   fast_replaceable_group = "container",
-  inventory_size = 80,
+  inventory_size = 19,
   logistic_mode = "requester",
   open_sound = { filename = "__base__/sound/metallic-chest-open.ogg", volume=0.43 },
   close_sound = { filename = "__base__/sound/metallic-chest-close.ogg", volume = 0.43 },
@@ -104,6 +105,7 @@ local request_depot =
   collision_box = {{-0.85, -0.85}, {0.85, 0.85}},
   selection_box = {{-1, -1}, {1, 1}},
   render_not_in_network_icon = false,
+  inventory_type = "with_filters_and_bar",
   resistances =
   {
     {
