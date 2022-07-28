@@ -13,6 +13,7 @@ local depot =
   render_not_in_network_icon = false,
   landing_location_offset = {0,0},
   scale_info_icons = true,
+  use_exact_mode = true,
   resistances =
   {
     {
@@ -476,26 +477,27 @@ local delivery_drone =
       }
     }
   },
-  sound_minimum_speed = 0.25,
-  sound_scaling_ratio = 0.8,
+  sound_minimum_speed = 0.1,
+  sound_scaling_ratio = 0.1,
   working_sound =
   {
     sound =
     {
-      filename = "__base__/sound/car-engine.ogg",
-      volume = 0.67
+      filename = "__Kontraptions__/data/long-range-delivery-drone/engine.ogg",
+      volume = 0.4
     },
-    activate_sound =
+    poop_activate_sound =
     {
       filename = "__base__/sound/car-engine-start.ogg",
       volume = 0.67
     },
-    deactivate_sound =
+    poop_deactivate_sound =
     {
       filename = "__base__/sound/car-engine-stop.ogg",
       volume = 0.67
     },
-    match_speed_to_activity = true
+    --match_speed_to_activity = true,
+    match_volume_to_activity = true
   },
   open_sound = { filename = "__base__/sound/car-door-open.ogg", volume=0.5 },
   close_sound = { filename = "__base__/sound/car-door-close.ogg", volume = 0.4 },
