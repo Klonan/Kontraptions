@@ -672,7 +672,7 @@ Depot.has_order_timeout = function(self)
   local tick = self.tick_of_recieved_order
   if not tick then return end
   if game.tick >= (tick + DEPOT_ORDER_TIMEOUT) then
-    self:say("Depot order timeout")
+    --self:say("Depot order timeout")
     return true
   end
 end
