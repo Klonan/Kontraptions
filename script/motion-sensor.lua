@@ -7,44 +7,6 @@ local script_data =
   tick_updates = {}
 }
 
---[[
-
-on_script_trigger_effect
-
-Called when a script trigger effect is triggered.
-
-effect_id
-:: string
-
-    The effect_id specified in the trigger effect.
-surface_index
-:: uint
-
-    The surface the effect happened on.
-source_position
-:: Position
-Optional
-source_entity
-:: LuaEntity
-Optional
-target_position
-:: Position
-Optional
-target_entity
-:: LuaEntity
-Optional
-name
-:: defines.events
-
-    Identifier of the event
-tick
-:: uint
-
-    Tick the event was generated.
-
-
-]]
-
 local init_pair = function(turret, combinator)
   turret.destructible = false
 

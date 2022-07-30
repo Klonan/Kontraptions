@@ -14,7 +14,6 @@ local connect_if_circuit_network = function(source, target)
   end
 end
 
-
 local connect_circuit_neighbours = function(electric_pole)
   local neighbours = electric_pole.neighbours
 
@@ -25,7 +24,6 @@ local connect_circuit_neighbours = function(electric_pole)
     connect_if_circuit_network(neighbour, electric_pole)
   end
 end
-
 
 local on_built_entity = function(event)
   local entity = event.created_entity
@@ -38,8 +36,6 @@ local on_built_entity = function(event)
   connect_circuit_neighbours(entity)
 
 end
-
-
 
 local lib = {}
 

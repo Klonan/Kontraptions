@@ -90,7 +90,7 @@ local add_to_update_schedule = function(self)
   bucket[self.unit_number] = self
 end
 
-get_depots_on_map = function(surface, force, list)
+local get_depots_on_map = function(surface, force, list)
   local force_depots = list[force.name]
   return force_depots and force_depots[surface.name]
 end
@@ -955,7 +955,7 @@ local add_or_update_targeting_panel = function(targeting_me, gui)
     camera.ignored_by_interaction = true
     local sprite = targeting_me:get_minimap_icon()
     if sprite then
-      icon = camera.add{type = "sprite", sprite = sprite}
+      local icon = camera.add{type = "sprite", sprite = sprite}
       icon.style.padding = {(191 - 32)/2, (191 - 32)/2}
     end
     if targeting_me.get_distance_to_target then

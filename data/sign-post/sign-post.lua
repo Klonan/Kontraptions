@@ -1,5 +1,5 @@
 
-pictures = function()
+local pictures = function()
   return
   {
     straight_vertical_single =
