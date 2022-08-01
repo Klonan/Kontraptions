@@ -549,7 +549,8 @@ Depot.can_handle_request = function(self, request_depot)
     return false
   end
 
-  if (self.entity.logistic_network == request_depot.entity.logistic_network) then
+  local logistic_network = self.entity.logistic_network
+  if (logistic_network and logistic_network == request_depot.entity.logistic_network) then
     return false
   end
 
@@ -821,23 +822,22 @@ Request_depot.get_closest = function(self, depots)
 end
 
 Request_depot.try_to_schedule_delivery = function(self, item_name, item_count)
-
   local depots = get_depots_on_map(self.entity.surface, self.entity.force, script_data.depot_map)
   if not depots then return end
-
+  
   --self:say("Trying to schedule: " .. item_name .. " " .. item_count)
-
+  
   local stack_size = get_stack_size(item_name)
-
+  
   local request_count = min(item_count, stack_size * MAX_DELIVERY_STACKS)
-
+  
   local depots_to_check = {{}, {}, {}, {}}
-
+  
   local check_depot = function(unit_number, depot)
     if depot:get_available_capacity(item_name) < stack_size * MIN_DELIVERY_STACKS then
       return
     end
-
+    
     local inventory_count = depot:get_inventory_count(item_name)
     if inventory_count >= request_count then
       depots_to_check[1][unit_number] = depot
@@ -1055,7 +1055,7 @@ Request_depot.update = function(self)
   local scheduled = self.scheduled
   local on_the_way = self.logistic_point.targeted_items_deliver or {}
   local get_request_slot = self.entity.get_request_slot
-
+  
   for slot_index = 1, self.entity.request_slot_count do
     local request = get_request_slot(slot_index)
     if request then
@@ -1145,23 +1145,6 @@ local update_depots = function(tick)
     --depot:say(unit_number)
     script_data.next_depot_update_index = unit_number
   end
-end
-
-local old_update_depots = function(tick)
-  local bucket_index = tick % DEPOT_UPDATE_INTERVAL
-  local bucket = script_data.depot_update_buckets[bucket_index]
-  if not bucket then return end
-
-  for unit_number, depot in pairs(bucket) do
-    if depot:update() then
-      bucket[unit_number] = nil
-    end
-  end
-
-  if not next(bucket) then
-    script_data.depots[bucket_index] = nil
-  end
-
 end
 
 local update_drones = function(tick)
